@@ -9,7 +9,6 @@ const Color = vec.Color;
 const Point3 = vec.Point3;
 const Ray = ray.Ray;
 
-const splat = vec.splat;
 const dot = vec.dot;
 
 fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
@@ -28,7 +27,7 @@ fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
 fn rayColor(r: Ray) Color {
     var t = hitSphere(Point3{ 0, 0, -1 }, 0.5, r);
     if (t > 0.0) {
-        const N: Vec3 = vec.unit(ray.at(r, t) - Color{ 0, 0, -1 });
+        const N: Vec3 = vec.unit(r.at(t) - Color{ 0, 0, -1 });
         return @splat(3, @as(f64, 0.5)) * (N + @splat(3, @as(f64, 1)));
     }
     const unit_direction = vec.unit(r.direction);

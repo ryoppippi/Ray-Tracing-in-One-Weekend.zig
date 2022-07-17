@@ -6,7 +6,9 @@ const Vec3 = vec.Vec3;
 pub const Ray = struct {
     origin: Point3,
     direction: Vec3,
+    const Self = @This();
+
+    pub fn at(self: Self, t: anytype) Point3 {
+        return self.origin + @splat(3, t) * self.direction;
+    }
 };
-pub fn at(ray: Ray, t: anytype) Point3 {
-    return ray.origin + @splat(3, t) * ray.direction;
-}
