@@ -3,6 +3,9 @@ const math = std.math;
 
 const expectEqual = std.testing.expectEqual;
 
+pub const Point3 = @Vector(3, f64);
+pub const Color = @Vector(3, f64);
+
 pub fn vsize(comptime v: anytype) comptime_int {
     const T = @TypeOf(v);
     return @typeInfo(T).Vector.len;
