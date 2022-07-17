@@ -22,7 +22,7 @@ pub const Sphere = struct {
         r: Ray,
         tMin: f64,
         tMax: f64,
-        rec: HitRecord,
+        rec: *HitRecord,
     ) bool {
         const oc = r.origin - self.center;
         const a = dot(r.direction, r.direction);
@@ -42,12 +42,12 @@ pub const Sphere = struct {
             }
         }
 
-        rec.t = root;
-        rec.p = r.at(rec.t);
-        rec.normal = (rec.p - self.center) / self.radius;
+        rec.*.t = root;
+        rec.*.p = r.at(rec.*.t);
+        rec.*.normal = (rec.*.p - self.center) / self.radius;
 
-        const outward_normal = (rec.p - self.center) / self.radius;
-        rec.set_face_normal(r, outward_normal);
+        const outward_normal = (rec.*.p - self.center) / self.radius;
+        rec.*.set_face_normal(r, outward_normal);
 
         return true;
     }
