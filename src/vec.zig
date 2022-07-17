@@ -3,9 +3,9 @@ const math = std.math;
 
 const expectEqual = std.testing.expectEqual;
 
+pub const Vec3 = @Vector(3, f64);
 pub const Point3 = @Vector(3, f64);
 pub const Color = @Vector(3, f64);
-pub const Vec3 = @Vector(3, f64);
 
 pub fn vsize(comptime v: anytype) comptime_int {
     const T = @TypeOf(v);
@@ -50,9 +50,6 @@ pub fn cross3(comptime v1: anytype, comptime v2: anytype) @TypeOf(v1) {
 }
 
 pub fn unit(comptime v: anytype) @TypeOf(v) {
-    if (vsize(v) == 0) {
-        return 0;
-    }
     return v / @splat(vsize(v), vlen(v));
 }
 
