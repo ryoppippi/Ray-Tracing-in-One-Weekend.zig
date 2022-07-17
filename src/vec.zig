@@ -12,30 +12,27 @@ pub fn vsize(comptime v: anytype) comptime_int {
     return @typeInfo(T).Vector.len;
 }
 
-pub fn vtype(comptime v: anytype) type {
+pub fn vtype(v: anytype) type {
     const T = @TypeOf(v);
     return @typeInfo(T).Vector.child;
 }
 
-pub fn vlen(comptime v: anytype) vtype(v) {
+pub fn vlen(comptime v: anytype) @typeInfo(@TypeOf(v)).Vector.child {
     if (vsize(v) == 0) {
         return 0;
     }
     return math.sqrt(vlenSquared(v));
 }
 
-pub fn vlenSquared(comptime v: anytype) vtype(v) {
+pub fn vlenSquared(comptime v: anytype) @typeInfo(@TypeOf(v)).Vector.child {
     if (vsize(v) == 0) {
         return 0;
     }
     return @reduce(.Add, v * v);
 }
 
-pub fn dot(comptime v1: anytype, comptime v2: anytype) @TypeOf(v1) {
-    if (vsize(v1) == 0 or vsize(v2) == 0) {
-        return 0;
-    }
-    return v1 * v2;
+pub fn dot(v1: anytype, v2: anytype) @typeInfo(@TypeOf(v1)).Vector.child {
+    return @reduce(.Add, v1 * v2);
 }
 
 pub fn cross3(comptime v1: anytype, comptime v2: anytype) @TypeOf(v1) {
