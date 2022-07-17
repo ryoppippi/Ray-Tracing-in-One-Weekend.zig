@@ -8,7 +8,7 @@ const Color = vec.Color;
 const Point3 = vec.Point3;
 const Ray = ray.Ray;
 
-pub const hitRecord = struct {
+pub const HitRecord = struct {
     p: Point3,
     normal: Vec3,
     t: f64,
@@ -20,3 +20,5 @@ pub const hitRecord = struct {
         self.normal = if (self.forward_face) outward_normal else -outward_normal;
     }
 };
+
+// not implement hittable

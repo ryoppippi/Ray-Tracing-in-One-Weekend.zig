@@ -8,7 +8,7 @@ const Vec3 = vec.Vec3;
 const Color = vec.Color;
 const Point3 = vec.Point3;
 const Ray = ray.Ray;
-const hitRecord = hittable.hitRecord;
+const HitRecord = hittable.HitRecord;
 
 const dot = vec.dot;
 
@@ -22,7 +22,7 @@ pub const Sphere = struct {
         r: Ray,
         tMin: f64,
         tMax: f64,
-        rec: hitRecord,
+        rec: HitRecord,
     ) bool {
         const oc = r.origin - self.center;
         const a = dot(r.direction, r.direction);
