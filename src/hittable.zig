@@ -14,6 +14,12 @@ pub const hitRecord = struct {
     p: Point3,
     normal: Vec3,
     t: f64,
+    front_face: bool,
+    const Self = This();
+    pub fn set_face_normal(self: Self, ray: Ray, outward_normal: Vec3) bool {
+        self.front_face = dot(r.direction(), outward_normal) < 0;
+        self.normal = if (forward_face) outward_normal else -outward_normal;
+    }
 };
 
 pub const Sphere = struct {
@@ -40,6 +46,8 @@ pub const Sphere = struct {
             if (temp1 < tMax and temp1 > tMin) {
                 rec.t = temp1;
                 rec.p = r.at(rec.t);
+                const outward_normal = (rec.p - center) / radius;
+                rec.set_face_normal(r, outward_normal);
                 rec.normal = (rec.p - self.center) / self.radius;
                 return true;
             }
@@ -47,6 +55,8 @@ pub const Sphere = struct {
             if (temp2 < tMax and temp2 > tMin) {
                 rec.t = temp2;
                 rec.p = r.at(rec.t);
+                const outward_normal = (rec.p - center) / radius;
+                rec.set_face_normal(r, outward_normal);
                 rec.normal = (rec.p - self.center) / self.radius;
                 return true;
             }
