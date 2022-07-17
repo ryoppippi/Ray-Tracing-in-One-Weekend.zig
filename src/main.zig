@@ -21,10 +21,9 @@ fn hitSphere(center: Point3, radius: f64, r: Ray) bool {
 }
 
 fn rayColor(r: Ray) Color {
-    // const unit_direction = vec.unit(r.direction);  //TODO error: runtime value cannot be passed to comptime arg
     if (hitSphere(Point3{ 0, 0, -1 }, 0.5, r))
         return Color{ 1, 0, 0 };
-    const unit_direction = r.direction / @splat(3, math.sqrt(@reduce(.Add, r.direction * r.direction)));
+    const unit_direction = vec.unit(r.direction); //TODO error: runtime value cannot be passed to comptime arg
     const t = 0.5 * (unit_direction[1] + 1.0);
     return @splat(3, 1.0 - t) * Color{ 1.0, 1.0, 1.0 } + @splat(3, t) * Color{ 0.5, 0.7, 1.0 };
 }

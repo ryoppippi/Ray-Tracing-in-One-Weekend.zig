@@ -8,8 +8,7 @@ pub const Point3 = @Vector(3, f64);
 pub const Color = @Vector(3, f64);
 
 pub fn vsize(comptime v: anytype) comptime_int {
-    const T = @TypeOf(v);
-    return @typeInfo(T).Vector.len;
+    return @typeInfo(@TypeOf(v)).Vector.len;
 }
 
 pub fn vtype(v: anytype) type {
@@ -17,18 +16,8 @@ pub fn vtype(v: anytype) type {
     return @typeInfo(T).Vector.child;
 }
 
-pub fn vlen(comptime v: anytype) @typeInfo(@TypeOf(v)).Vector.child {
-    if (vsize(v) == 0) {
-        return 0;
-    }
-    return math.sqrt(vlenSquared(v));
-}
-
-pub fn vlenSquared(comptime v: anytype) @typeInfo(@TypeOf(v)).Vector.child {
-    if (vsize(v) == 0) {
-        return 0;
-    }
-    return @reduce(.Add, v * v);
+pub fn vlen(v: anytype) @typeInfo(@TypeOf(v)).Vector.child {
+    return math.sqrt(dot(v, v));
 }
 
 pub fn dot(v1: anytype, v2: anytype) @typeInfo(@TypeOf(v1)).Vector.child {
@@ -46,8 +35,9 @@ pub fn cross3(comptime v1: anytype, comptime v2: anytype) @TypeOf(v1) {
     };
 }
 
-pub fn unit(comptime v: anytype) @TypeOf(v) {
-    return v / @splat(vsize(v), vlen(v));
+pub fn unit(v: anytype) @TypeOf(v) {
+    const size = @typeInfo(@TypeOf(v)).Vector.len;
+    return v / @splat(size, vlen(v));
 }
 
 test "vector vsize" {
@@ -77,7 +67,7 @@ test "vector vtype" {
 test "vector dot" {
     const v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
-    const answer = @Vector(3, f32){ 1, 10, 21 };
+    const answer = @as(vtype(v1), (1 * 1 + 2 * 5 + 3 * 7));
     try expectEqual(answer, dot(v1, v2));
 }
 
