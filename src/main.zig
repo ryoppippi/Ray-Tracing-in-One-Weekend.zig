@@ -10,17 +10,18 @@ const Point3 = vec.Point3;
 const Ray = ray.Ray;
 
 const splat = vec.splat;
+const dot = vec.dot;
 
 fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
     const oc = r.origin - center;
-    const a = vec.dot(r.direction, r.direction);
-    const b = 2.0 * vec.dot(oc, r.direction);
-    const c = vec.dot(oc, oc) - radius * radius;
-    const discriminant = b * b - 4.0 * a * c;
+    const a = dot(r.direction, r.direction);
+    const half_b = dot(oc, r.direction);
+    const c = dot(oc, oc) - radius * radius;
+    const discriminant = half_b * half_b - a * c;
     if (discriminant < 0) {
         return -1.0;
     } else {
-        return (-b - math.sqrt(discriminant)) / (2.0 * a);
+        return (-half_b - math.sqrt(discriminant)) / a;
     }
 }
 
