@@ -11,20 +11,27 @@ const Ray = ray.Ray;
 
 const splat = vec.splat;
 
-fn hitSphere(center: Point3, radius: f64, r: Ray) bool {
+fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
     const oc = r.origin - center;
     const a = vec.dot(r.direction, r.direction);
     const b = 2.0 * vec.dot(oc, r.direction);
     const c = vec.dot(oc, oc) - radius * radius;
     const discriminant = b * b - 4.0 * a * c;
-    return discriminant > 0;
+    if (discriminant < 0) {
+        return -1.0;
+    } else {
+        return (-b - math.sqrt(discriminant)) / (2.0 * a);
+    }
 }
 
 fn rayColor(r: Ray) Color {
-    if (hitSphere(Point3{ 0, 0, -1 }, 0.5, r))
-        return Color{ 1, 0, 0 };
-    const unit_direction = vec.unit(r.direction); //TODO error: runtime value cannot be passed to comptime arg
-    const t = 0.5 * (unit_direction[1] + 1.0);
+    var t = hitSphere(Point3{ 0, 0, -1 }, 0.5, r);
+    if (t > 0.0) {
+        const N: Vec3 = vec.unit(ray.at(r, t) - Color{ 0, 0, -1 });
+        return @splat(3, @as(f64, 0.5)) * (N + @splat(3, @as(f64, 1)));
+    }
+    const unit_direction = vec.unit(r.direction);
+    t = 0.5 * (unit_direction[1] + 1.0);
     return @splat(3, 1.0 - t) * Color{ 1.0, 1.0, 1.0 } + @splat(3, t) * Color{ 0.5, 0.7, 1.0 };
 }
 

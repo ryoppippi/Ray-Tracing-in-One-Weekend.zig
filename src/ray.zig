@@ -7,6 +7,6 @@ pub const Ray = struct {
     origin: Point3,
     direction: Vec3,
 };
-pub fn at(ray: Ray, t: comptime_float) Point3 {
-    return ray.origin + t * ray.direction;
+pub fn at(ray: Ray, t: anytype) Point3 {
+    return ray.origin + @splat(3, t) * ray.direction;
 }
