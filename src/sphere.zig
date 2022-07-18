@@ -1,27 +1,30 @@
 const std = @import("std");
 const math = std.math;
+const rtw = @import("rtweekend.zig");
 const vec = @import("vec.zig");
 const ray = @import("ray.zig");
 const hittable = @import("hittable.zig");
 
-const Vec3 = vec.Vec3;
-const Color = vec.Color;
-const Point3 = vec.Point3;
+const Vec3 = rtw.Vec3;
+const Color = rtw.Color;
+const Point3 = rtw.Point3;
+const SType = rtw.SType;
 const Ray = ray.Ray;
 const HitRecord = hittable.HitRecord;
 
 const dot = vec.dot;
+const f3 = rtw.f3;
 
 pub const Sphere = struct {
     center: Point3,
-    radius: f64,
+    radius: SType,
     const Self = @This();
 
     pub fn hit(
         self: Self,
         r: Ray,
-        tMin: f64,
-        tMax: f64,
+        tMin: SType,
+        tMax: SType,
         rec: *HitRecord,
     ) bool {
         const oc = r.origin - self.center;
@@ -31,11 +34,10 @@ pub const Sphere = struct {
 
         const discriminant = half_b * half_b - a * c;
         if (discriminant < 0) return false;
-
         const sqrtd = math.sqrt(discriminant);
 
-        var root = (-half_b - math.sqrt(discriminant)) / a;
-        if (root < tMax and root > tMin) {
+        var root = (-half_b - sqrtd) / a;
+        if (root < tMin or tMax < root) {
             root = (-half_b + sqrtd) / a;
             if (root < tMax or root > tMin) {
                 return false;
@@ -44,10 +46,10 @@ pub const Sphere = struct {
 
         rec.*.t = root;
         rec.*.p = r.at(rec.*.t);
-        rec.*.normal = (rec.*.p - self.center) / self.radius;
+        rec.*.normal = (rec.*.p - self.center) / f3(self.radius);
 
-        const outward_normal = (rec.*.p - self.center) / self.radius;
-        rec.*.set_face_normal(r, outward_normal);
+        const outward_normal: Vec3 = (rec.*.p - self.center) / f3(self.radius);
+        _ = rec.*.set_face_normal(r, outward_normal);
 
         return true;
     }

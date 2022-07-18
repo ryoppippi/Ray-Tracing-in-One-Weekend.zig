@@ -3,14 +3,6 @@ const math = std.math;
 
 const expectEqual = std.testing.expectEqual;
 
-pub const Vec3 = @Vector(3, f64);
-pub const Point3 = Vec3;
-pub const Color = Vec3;
-pub fn f3(n: anytype) Vec3 {
-    const dummyVec = Vec3{ 0, 0, 0 };
-    return full_like(dummyVec, n);
-}
-
 pub fn vsize(comptime T: type) comptime_int {
     _ = ensureVector(T);
     return @typeInfo(T).Vector.len;
@@ -50,12 +42,13 @@ pub fn cross3(v1: anytype, v2: anytype) @TypeOf(v1) {
 }
 
 pub fn unit(v: anytype) @TypeOf(v) {
-    return v / full_like(v, vlen(v));
+    const T = @TypeOf(v);
+    return v / full(T, vlen(v));
 }
 
-pub fn full_like(v: anytype, n: anytype) @TypeOf(v) {
-    const vs = vsize(ensureVector(@TypeOf(v)));
-    const vt = vtype(@TypeOf(v));
+pub fn full(comptime T: type, n: anytype) T {
+    const vs = vsize(ensureVector(T));
+    const vt = vtype(T);
     const nT = @TypeOf(n);
     switch (@typeInfo(nT)) {
         .ComptimeFloat, .Float, .ComptimeInt, .Int => {

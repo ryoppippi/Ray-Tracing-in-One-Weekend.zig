@@ -3,46 +3,50 @@ const math = std.math;
 const vec = @import("vec.zig");
 const color = @import("color.zig");
 const ray = @import("ray.zig");
+const hittable = @import("hittable.zig");
+const hittableList = @import("hittableList.zig");
+const sphere = @import("sphere.zig");
+const rtw = @import("rtweekend.zig");
 
-const Vec3 = vec.Vec3;
-const Color = vec.Color;
-const Point3 = vec.Point3;
+const Vec3 = rtw.Vec3;
+const Color = rtw.Color;
+const Point3 = rtw.Point3;
+const SType = rtw.SType;
 const Ray = ray.Ray;
+const HitRecord = hittable.HitRecord;
+const HittableList = hittableList.HittableList;
+const Sphere = sphere.Sphere;
 
 const dot = vec.dot;
-const f3 = vec.f3;
+const f3 = rtw.f3;
 
-fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
-    const oc = r.origin - center;
-    const a = dot(r.direction, r.direction);
-    const half_b = dot(oc, r.direction);
-    const c = dot(oc, oc) - radius * radius;
-    const discriminant = half_b * half_b - a * c;
-    if (discriminant < 0) {
-        return -1.0;
-    } else {
-        return (-half_b - math.sqrt(discriminant)) / a;
-    }
-}
+const infinity = rtw.infinity;
 
-fn rayColor(r: Ray) Color {
-    var t = hitSphere(Point3{ 0, 0, -1 }, 0.5, r);
-    if (t > 0.0) {
-        const N: Vec3 = vec.unit(r.at(t) - Color{ 0, 0, -1 });
-        return f3(0.5) * (N + f3(1));
+fn rayColor(r: Ray, world: *HittableList) Color {
+    var rec: HitRecord = undefined;
+    if (world.hit(r, 0, infinity, &rec)) {
+        return f3(0.5) * (rec.normal + f3(1.0));
     }
     const unit_direction = vec.unit(r.direction);
-    t = 0.5 * (unit_direction[1] + 1.0);
+    const t = 0.5 * (unit_direction[1] + 1.0);
     return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
 pub fn main() anyerror!void {
     const stdout = std.io.getStdOut().writer();
 
+    // image
     const aspect_ratio = 16.0 / 9.0;
     const image_width: u32 = 384;
     comptime var image_height: u32 = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
 
+    // world
+    var world = HittableList.init();
+    defer world.deinit();
+    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5 });
+    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100 });
+
+    // camera
     const viewport_height = 2.0;
     const viweport_width = aspect_ratio * viewport_height;
     const focal_length = 1.0;
@@ -52,19 +56,20 @@ pub fn main() anyerror!void {
     const vertical = Vec3{ 0.0, viewport_height, 0.0 };
     const lower_left_corner = origin - horizontal / f3(2) - vertical / f3(2) - Vec3{ 0.0, 0.0, focal_length };
 
+    // Render
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
     var j: i32 = image_height - 1;
     while (0 <= j) : (j -= 1) {
         var i: i32 = 0;
         while (i < image_width) : (i += 1) {
-            const u = @as(f64, @intToFloat(f64, i) / @intToFloat(f64, image_width - 1));
-            const v = @as(f64, @intToFloat(f64, j) / @intToFloat(f64, image_height - 1));
+            const u = @as(SType, @intToFloat(SType, i) / @as(SType, image_width - 1));
+            const v = @as(SType, @intToFloat(SType, j) / @as(SType, image_height - 1));
             const r: Ray = Ray{
                 .origin = origin,
-                .direction = lower_left_corner + f3(u) * horizontal + f3(v) * vertical - origin,
+                .direction = lower_left_corner + f3(u) * horizontal + f3(v) * vertical,
             };
-            const pixelColor: Color = rayColor(r);
+            const pixelColor: Color = rayColor(r, &world);
             try color.writeColor(stdout, pixelColor);
         }
     }

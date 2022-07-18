@@ -1,8 +1,9 @@
 const vec = @import("vec.zig");
+const rtw = @import("rtweekend.zig");
 
-const Point3 = vec.Point3;
-const Vec3 = vec.Vec3;
-const f3 = vec.f3;
+const Point3 = rtw.Point3;
+const Vec3 = rtw.Vec3;
+const f3 = rtw.f3;
 
 pub const Ray = struct {
     origin: Point3,
