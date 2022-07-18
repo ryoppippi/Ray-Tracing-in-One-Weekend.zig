@@ -25,10 +25,11 @@ const f3 = rtw.f3;
 
 const infinity = rtw.getInfinity(SType);
 
-fn rayColor(r: Ray, world: *HittableList) Color {
+fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen) Color {
     var rec: HitRecord = undefined;
     if (world.hit(r, 0, infinity, &rec)) {
-        return f3(0.5) * (rec.normal + f3(1.0));
+        const target: Point3 = rec.p + rec.normal + vec.randomInUnitSphere(rnd, Vec3);
+        return f3(0.5) * rayColor(Ray{ .origin = rec.p, .direction = target - rec.p }, world, rnd);
     }
     const unit_direction = vec.unit(r.direction);
     const t = 0.5 * (unit_direction[1] + 1.0);
@@ -67,7 +68,7 @@ pub fn main() anyerror!void {
                 const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
                 const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
                 const r = cam.getRay(u, v);
-                pixel_color += rayColor(r, &world);
+                pixel_color += rayColor(r, &world, &rnd);
             }
             try color.writeColor(stdout, pixel_color, samples_per_pixel);
         }

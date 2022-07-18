@@ -35,10 +35,6 @@ pub fn getRandom(rnd: *RandGen, comptime T: type) T {
     };
 }
 
-pub fn getRandomMinMax(comptime T: type, min: T, max: T) T {
-    return min + (max - min) * getRandom() / (getInfinity(T) + 1);
-}
-
 pub fn clamp(x: SType, min: SType, max: SType) SType {
     return if (x < min) min else if (x > max) max else x;
 }

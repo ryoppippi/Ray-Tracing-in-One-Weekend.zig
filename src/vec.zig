@@ -1,5 +1,8 @@
 const std = @import("std");
 const math = std.math;
+const rtw = @import("rtweekend.zig");
+
+const RandGen = rtw.RandGen;
 
 const expectEqual = std.testing.expectEqual;
 
@@ -54,6 +57,26 @@ pub inline fn full(comptime T: type, n: anytype) T {
         .ComptimeFloat, .Float, .ComptimeInt, .Int => @splat(vs, @as(vt, n)),
         else => @compileError("not implemented for " ++ @typeName(nT)),
     };
+}
+
+pub inline fn randomVec(rnd: *RandGen, comptime T: type) T {
+    _ = ensureVector(T);
+    const vs = vsize(T);
+    const vt = vtype(T);
+    var dummy = full(T, 0);
+    var i: u32 = 0;
+    while (i < vs) : (i += 1) {
+        dummy[i] = rtw.getRandom(rnd, vt);
+    }
+    return dummy;
+}
+
+pub inline fn randomInUnitSphere(rnd: *RandGen, comptime T: type) T {
+    while (true) {
+        const p = randomVec(rnd, T);
+        if (dot(p, p) > 1.0) continue;
+        return p;
+    }
 }
 
 fn ensureVector(comptime T: type) type {
