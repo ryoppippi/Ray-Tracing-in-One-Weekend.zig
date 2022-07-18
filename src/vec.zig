@@ -79,6 +79,14 @@ pub inline fn randomInUnitSphere(rnd: *RandGen, comptime T: type) T {
     }
 }
 
+pub inline fn randomUnitVector(rnd: *RandGen, comptime T: type) T {
+    const vt = vtype(T);
+    const a = rtw.getRandom(rnd, vt) * 2 * math.pi; // 0 ~ 2pi
+    const z = rtw.getRandom(rnd, vt) * 2 - 1; // -1 ~ 1
+    const r = math.sqrt(1 - z * z);
+    return T{ r * math.cos(a), r * math.sin(a), z };
+}
+
 fn ensureVector(comptime T: type) type {
     if (@typeInfo(T) != .Vector) {
         @compileError("assertIsTypeVector: type is not a vector");
