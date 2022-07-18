@@ -3,22 +3,22 @@ const math = std.math;
 
 const expectEqual = std.testing.expectEqual;
 
-pub fn vsize(comptime T: type) comptime_int {
+pub inline fn vsize(comptime T: type) comptime_int {
     _ = ensureVector(T);
     return @typeInfo(T).Vector.len;
 }
 
-pub fn vtype(comptime T: type) type {
+pub inline fn vtype(comptime T: type) type {
     _ = ensureVector(T);
     return @typeInfo(T).Vector.child;
 }
 
-pub fn vlen(v: anytype) vtype(@TypeOf(v)) {
+pub inline fn vlen(v: anytype) vtype(@TypeOf(v)) {
     _ = ensureVector(@TypeOf(v));
     return math.sqrt(dot(v, v));
 }
 
-pub fn dot(v1: anytype, v2: anytype) vtype(@TypeOf(v1)) {
+pub inline fn dot(v1: anytype, v2: anytype) vtype(@TypeOf(v1)) {
     const vt1 = ensureVector(@TypeOf(v1));
     const vt2 = ensureVector(@TypeOf(v2));
     if (vt1 != vt2) {
@@ -28,7 +28,7 @@ pub fn dot(v1: anytype, v2: anytype) vtype(@TypeOf(v1)) {
     return @reduce(.Add, v1 * v2);
 }
 
-pub fn cross3(v1: anytype, v2: anytype) @TypeOf(v1) {
+pub inline fn cross3(v1: anytype, v2: anytype) @TypeOf(v1) {
     const vt1 = ensureVector(@TypeOf(v1));
     const vt2 = ensureVector(@TypeOf(v2));
     if (vsize(vt1) != 3 or vsize(vt2) != 3) {
@@ -41,12 +41,12 @@ pub fn cross3(v1: anytype, v2: anytype) @TypeOf(v1) {
     };
 }
 
-pub fn unit(v: anytype) @TypeOf(v) {
+pub inline fn unit(v: anytype) @TypeOf(v) {
     const T = @TypeOf(v);
     return v / full(T, vlen(v));
 }
 
-pub fn full(comptime T: type, n: anytype) T {
+pub inline fn full(comptime T: type, n: anytype) T {
     const vs = vsize(ensureVector(T));
     const vt = vtype(T);
     const nT = @TypeOf(n);
