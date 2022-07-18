@@ -32,7 +32,7 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
         return Color{ 0.0, 0.0, 0.0 };
     }
 
-    if (world.hit(r, 0, infinity, &rec)) {
+    if (world.hit(r, 0.001, infinity, &rec)) {
         const target: Point3 = rec.p + rec.normal + vec.randomInUnitSphere(rnd, Vec3);
         return f3(0.5) * rayColor(Ray{ .origin = rec.p, .direction = target - rec.p }, world, rnd, depth - 1);
     }
