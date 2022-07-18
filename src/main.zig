@@ -1,26 +1,29 @@
 const std = @import("std");
 const math = std.math;
 const vec = @import("vec.zig");
+const rtw = @import("rtweekend.zig");
 const color = @import("color.zig");
 const ray = @import("ray.zig");
 const hittable = @import("hittable.zig");
 const hittableList = @import("hittableList.zig");
 const sphere = @import("sphere.zig");
-const rtw = @import("rtweekend.zig");
+const camera = @import("camera.zig");
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
 const Point3 = rtw.Point3;
 const SType = rtw.SType;
+const RandGen = rtw.RandGen;
 const Ray = ray.Ray;
 const HitRecord = hittable.HitRecord;
 const HittableList = hittableList.HittableList;
 const Sphere = sphere.Sphere;
+const Camera = camera.Camera;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
 
-const infinity = rtw.infinity;
+const infinity = rtw.getInfinity(SType);
 
 fn rayColor(r: Ray, world: *HittableList) Color {
     var rec: HitRecord = undefined;
@@ -34,11 +37,13 @@ fn rayColor(r: Ray, world: *HittableList) Color {
 
 pub fn main() anyerror!void {
     const stdout = std.io.getStdOut().writer();
+    var rnd = RandGen.init(0);
 
     // image
     const aspect_ratio = 16.0 / 9.0;
-    const image_width: u32 = 384;
+    const image_width: u32 = 400;
     comptime var image_height: u32 = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
+    const samples_per_pixel: u32 = 100;
 
     // world
     var world = HittableList.init();
@@ -47,14 +52,7 @@ pub fn main() anyerror!void {
     _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100 });
 
     // camera
-    const viewport_height = 2.0;
-    const viweport_width = aspect_ratio * viewport_height;
-    const focal_length = 1.0;
-
-    const origin = Point3{ 0.0, 0.0, 0.0 };
-    const horizontal = Vec3{ viweport_width, 0.0, 0.0 };
-    const vertical = Vec3{ 0.0, viewport_height, 0.0 };
-    const lower_left_corner = origin - horizontal / f3(2) - vertical / f3(2) - Vec3{ 0.0, 0.0, focal_length };
+    const cam = Camera.init();
 
     // Render
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
@@ -63,14 +61,15 @@ pub fn main() anyerror!void {
     while (0 <= j) : (j -= 1) {
         var i: i32 = 0;
         while (i < image_width) : (i += 1) {
-            const u = @as(SType, @intToFloat(SType, i) / @as(SType, image_width - 1));
-            const v = @as(SType, @intToFloat(SType, j) / @as(SType, image_height - 1));
-            const r: Ray = Ray{
-                .origin = origin,
-                .direction = lower_left_corner + f3(u) * horizontal + f3(v) * vertical,
-            };
-            const pixelColor: Color = rayColor(r, &world);
-            try color.writeColor(stdout, pixelColor);
+            var pixel_color = Color{ 0, 0, 0 };
+            var s: i32 = 0;
+            while (s < samples_per_pixel) : (s += 1) {
+                const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
+                const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
+                const r = cam.getRay(u, v);
+                pixel_color += rayColor(r, &world);
+            }
+            try color.writeColor(stdout, pixel_color, samples_per_pixel);
         }
     }
 }

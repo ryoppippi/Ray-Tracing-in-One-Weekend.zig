@@ -50,17 +50,14 @@ pub inline fn full(comptime T: type, n: anytype) T {
     const vs = vsize(ensureVector(T));
     const vt = vtype(T);
     const nT = @TypeOf(n);
-    switch (@typeInfo(nT)) {
-        .ComptimeFloat, .Float, .ComptimeInt, .Int => {
-            return @splat(vs, @as(vt, n));
-        },
+    return switch (@typeInfo(nT)) {
+        .ComptimeFloat, .Float, .ComptimeInt, .Int => @splat(vs, @as(vt, n)),
         else => @compileError("not implemented for " ++ @typeName(nT)),
-    }
+    };
 }
 
 fn ensureVector(comptime T: type) type {
-    const info = @typeInfo(T);
-    if (info != .Vector) {
+    if (@typeInfo(T) != .Vector) {
         @compileError("assertIsTypeVector: type is not a vector");
     }
     return T;
