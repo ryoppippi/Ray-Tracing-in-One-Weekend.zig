@@ -4,6 +4,7 @@ const rtw = @import("rtweekend.zig");
 const vec = @import("vec.zig");
 const ray = @import("ray.zig");
 const hittable = @import("hittable.zig");
+const material = @import("material.zig");
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
@@ -11,6 +12,7 @@ const Point3 = rtw.Point3;
 const SType = rtw.SType;
 const Ray = ray.Ray;
 const HitRecord = hittable.HitRecord;
+const Material = material.Material;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
@@ -18,7 +20,12 @@ const f3 = rtw.f3;
 pub const Sphere = struct {
     center: Point3,
     radius: SType,
+    m: *Material,
     const Self = @This();
+
+    pub fn init(center: Point3, radius: SType, m: *Material) Self {
+        return Self{ .center = center, .radius = radius, .m = m };
+    }
 
     pub fn hit(
         self: Self,
@@ -47,6 +54,7 @@ pub const Sphere = struct {
         rec.*.t = root;
         rec.*.p = r.at(rec.*.t);
         rec.*.normal = (rec.*.p - self.center) / f3(self.radius);
+        rec.*.m = self.m;
 
         const outward_normal: Vec3 = (rec.*.p - self.center) / f3(self.radius);
         _ = rec.*.set_face_normal(r, outward_normal);
