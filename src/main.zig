@@ -10,6 +10,7 @@ const Point3 = vec.Point3;
 const Ray = ray.Ray;
 
 const dot = vec.dot;
+const f3 = vec.f3;
 
 fn hitSphere(center: Point3, radius: f64, r: Ray) f64 {
     const oc = r.origin - center;
@@ -28,11 +29,11 @@ fn rayColor(r: Ray) Color {
     var t = hitSphere(Point3{ 0, 0, -1 }, 0.5, r);
     if (t > 0.0) {
         const N: Vec3 = vec.unit(r.at(t) - Color{ 0, 0, -1 });
-        return @splat(3, @as(f64, 0.5)) * (N + @splat(3, @as(f64, 1)));
+        return f3(0.5) * (N + f3(1));
     }
     const unit_direction = vec.unit(r.direction);
     t = 0.5 * (unit_direction[1] + 1.0);
-    return @splat(3, 1.0 - t) * Color{ 1.0, 1.0, 1.0 } + @splat(3, t) * Color{ 0.5, 0.7, 1.0 };
+    return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
 pub fn main() anyerror!void {
@@ -49,7 +50,7 @@ pub fn main() anyerror!void {
     const origin = Point3{ 0.0, 0.0, 0.0 };
     const horizontal = Vec3{ viweport_width, 0.0, 0.0 };
     const vertical = Vec3{ 0.0, viewport_height, 0.0 };
-    const lower_left_corner = origin - horizontal / @splat(3, @as(f64, 2.0)) - vertical / @splat(3, @as(f64, 2.0)) - Vec3{ 0.0, 0.0, focal_length };
+    const lower_left_corner = origin - horizontal / f3(2) - vertical / f3(2) - Vec3{ 0.0, 0.0, focal_length };
 
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
@@ -61,7 +62,7 @@ pub fn main() anyerror!void {
             const v = @as(f64, @intToFloat(f64, j) / @intToFloat(f64, image_height - 1));
             const r: Ray = Ray{
                 .origin = origin,
-                .direction = lower_left_corner + @splat(3, u) * horizontal + @splat(3, v) * vertical - origin,
+                .direction = lower_left_corner + f3(u) * horizontal + f3(v) * vertical - origin,
             };
             const pixelColor: Color = rayColor(r);
             try color.writeColor(stdout, pixelColor);
