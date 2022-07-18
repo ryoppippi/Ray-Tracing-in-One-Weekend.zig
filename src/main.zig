@@ -33,8 +33,12 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
     }
 
     if (world.hit(r, 0.001, infinity, &rec)) {
-        const target: Point3 = rec.p + rec.normal + vec.randomInHemisphere(rnd, Vec3);
-        return f3(0.5) * rayColor(Ray{ .origin = rec.p, .direction = target - rec.p }, world, rnd, depth - 1);
+        const scattered: Ray = undefined;
+        const attenuation: Color = undefined;
+        if (rec.mat.scatter(r, rec, attenuation, &scattered)) {
+            return attenuation * rayColor(scattered, world, rnd, depth - 1);
+        }
+        return Color{ 0.0, 0.0, 0.0 };
     }
     const unit_direction = vec.unit(r.direction);
     const t = 0.5 * (unit_direction[1] + 1.0);

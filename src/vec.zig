@@ -96,6 +96,18 @@ pub fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
     }
 }
 
+pub fn reflect(v: anytype, n: anytype) @TypeOf(v) {
+    const vt = ensureVector(@TypeOf(v));
+    _ = ensureVector(@TypeOf(n));
+    return v - full(vt, 2) * dot(v, n) * n;
+}
+
+pub fn nearZero(v: anytype) bool {
+    _ = ensureVector(@TypeOf(v));
+    const s = 1e-8;
+    return -s < v[0] and v[0] < s and -s < v[1] and v[1] < s and -s < v[2] and v[2] < s;
+}
+
 fn ensureVector(comptime T: type) type {
     if (@typeInfo(T) != .Vector) {
         @compileError("assertIsTypeVector: type is not a vector");
