@@ -87,6 +87,15 @@ pub inline fn randomUnitVector(rnd: *RandGen, comptime T: type) T {
     return T{ r * math.cos(a), r * math.sin(a), z };
 }
 
+pub fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
+    const in_unit_sphere = randomInUnitSphere(rnd, T);
+    if (dot(in_unit_sphere, in_unit_sphere) > 0.0) {
+        return in_unit_sphere;
+    } else {
+        return -in_unit_sphere;
+    }
+}
+
 fn ensureVector(comptime T: type) type {
     if (@typeInfo(T) != .Vector) {
         @compileError("assertIsTypeVector: type is not a vector");
