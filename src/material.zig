@@ -70,7 +70,7 @@ const Dielectric = struct {
 
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
         attenuation.* = Color{ 1.0, 1.0, 1.0 };
         const refraction_ratio = if (rec.front_face) (1.0 / self.ir) else self.ir;
 
@@ -79,7 +79,7 @@ const Dielectric = struct {
         const sin_theta = math.sqrt(1.0 - cos_theta * cos_theta);
         const cannot_refract = refraction_ratio * sin_theta > 1.0;
 
-        const direction = switch (cannot_refract) {
+        const direction = switch (cannot_refract or self.reflectance(cos_theta, refraction_ratio) > rtw.getRandom(rnd, @TypeOf(cos_theta))) {
             true => vec.reflect(unit_direction, rec.normal),
             false => vec.refract(unit_direction, rec.normal, refraction_ratio),
         };
@@ -87,5 +87,12 @@ const Dielectric = struct {
         scattered.* = Ray{ .origin = rec.p, .direction = direction };
 
         return true;
+    }
+
+    fn reflectance(self: Self, cosine: SType, ref_idx: SType) SType {
+        _ = self;
+        const r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+        const r0_ = r0 * r0;
+        return r0_ + (1.0 - r0_) * math.pow(@TypeOf(cosine), 1.0 - cosine, 5.0);
     }
 };

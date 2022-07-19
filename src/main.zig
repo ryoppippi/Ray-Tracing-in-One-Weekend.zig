@@ -40,7 +40,7 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
         const is_scattered: bool = switch (rec.mat.*) {
             .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
             .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
-            .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered),
+            .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered, rnd),
         };
         if (is_scattered) {
             return attenuation * rayColor(scattered, world, rnd, depth - 1);
@@ -75,6 +75,7 @@ pub fn main() anyerror!void {
     _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
     _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = &material_center });
     _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = &material_left });
+    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = -0.4, .mat = &material_left });
     _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = &material_right });
 
     // camera
