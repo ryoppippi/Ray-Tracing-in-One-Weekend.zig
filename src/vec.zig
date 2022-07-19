@@ -4,8 +4,6 @@ const rtw = @import("rtweekend.zig");
 
 const RandGen = rtw.RandGen;
 
-const expectEqual = std.testing.expectEqual;
-
 pub inline fn vsize(comptime T: type) comptime_int {
     _ = ensureVector(T);
     return @typeInfo(T).Vector.len;
@@ -87,7 +85,7 @@ pub inline fn randomUnitVector(rnd: *RandGen, comptime T: type) T {
     return T{ r * math.cos(a), r * math.sin(a), z };
 }
 
-pub fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
+pub inline fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
     const in_unit_sphere = randomInUnitSphere(rnd, T);
     if (dot(in_unit_sphere, in_unit_sphere) > 0.0) {
         return in_unit_sphere;
@@ -96,7 +94,7 @@ pub fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
     }
 }
 
-pub fn reflect(v: anytype, n: anytype) @TypeOf(v) {
+pub inline fn reflect(v: anytype, n: anytype) @TypeOf(v) {
     const T = ensureVector(@TypeOf(v));
     const nT = ensureVector(@TypeOf(n));
     if (T != nT) {
@@ -105,18 +103,60 @@ pub fn reflect(v: anytype, n: anytype) @TypeOf(v) {
     return v - full(T, 2 * dot(v, n)) * n;
 }
 
-pub fn nearZero(v: anytype) bool {
-    _ = ensureVector(@TypeOf(v));
+pub inline fn nearZero(v: anytype) bool {
+    const T = ensureVector(@TypeOf(v));
+    const vsT = vtype(T);
     const s = 1e-8;
-    return -s < v[0] and v[0] < s and -s < v[1] and v[1] < s and -s < v[2] and v[2] < s;
+    // const abs_v = abs(v);
+    // return @reduce(.And, abs_v < s); // it does not compile on my M1 mac https://github.com/ziglang/zig/issues/12169
+    const abs = switch (@typeInfo(vsT)) {
+        .ComptimeFloat, .Float => math.fabs,
+        .ComptimeInt, .Int => math.absInt,
+        else => @compileError("not implemented for " ++ @typeName(vsT)),
+    };
+
+    {
+        var i: u32 = 0;
+        while (i < vsize(T)) : (i += 1) {
+            if (abs(v[i]) > s) return false;
+        }
+        return true;
+    }
 }
 
-fn ensureVector(comptime T: type) type {
+pub inline fn refract(uv: anytype, n: anytype, etai_over_etat: anytype) @TypeOf(uv) {
+    const uvT = ensureVector(@TypeOf(uv));
+    const nT = ensureVector(@TypeOf(n));
+    if (uvT != nT) {
+        @compileError("refract: vectors must be of the same type");
+    }
+    const etaT = @TypeOf(etai_over_etat);
+    const uvTs = vtype(uvT);
+    if (etaT != uvTs) {
+        @compileError("refract: eta and num type of uv must be of the same type");
+    }
+
+    const abs = switch (@typeInfo(etaT)) {
+        .ComptimeFloat, .Float => math.fabs,
+        .ComptimeInt, .Int => math.absInt,
+        else => @compileError("not implemented for " ++ @typeName(etaT)),
+    };
+
+    const cos_theta = math.min(dot(-uv, n), 1.0);
+    const r_out_perp = full(uvT, etai_over_etat) * (uv + full(uvT, cos_theta) * n);
+    const r_out_parallel = full(uvT, -math.sqrt(abs(1.0 - dot(r_out_perp, r_out_perp)))) * n;
+    return r_out_parallel + r_out_perp;
+}
+
+inline fn ensureVector(comptime T: type) type {
     if (@typeInfo(T) != .Vector) {
-        @compileError("assertIsTypeVector: type is not a vector");
+        @compileError("ensureIsTypeVector: type is not a vector");
     }
     return T;
 }
+
+const expectEqual = std.testing.expectEqual;
+const expect = @import("std").testing.expect;
 
 test "vector vsize" {
     const v1 = @Vector(1, f32){5};
@@ -224,4 +264,11 @@ test "immutable vector unit" {
     };
     v2 += @Vector(3, f64){ 0, 0, 0 };
     try expectEqual(answer2, unit(v2));
+}
+
+test "ensureVector" {
+    const v1 = @Vector(1, f32){3};
+    const T1 = @TypeOf(v1);
+    const T2 = ensureVector(T1);
+    try expectEqual(T1, T2);
 }

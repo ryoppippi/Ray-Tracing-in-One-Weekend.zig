@@ -17,6 +17,7 @@ const f3 = rtw.f3;
 pub const Material = union(enum) {
     Lambertian: Lambertian,
     Metal: Metal,
+    Dielectric: Dielectric,
 
     pub fn lambertian(albedo: Vec3) Material {
         return Material{ .Lambertian = Lambertian{ .albedo = albedo } };
@@ -24,6 +25,10 @@ pub const Material = union(enum) {
 
     pub fn metal(albedo: Vec3, fuzz: SType) Material {
         return Material{ .Metal = Metal{ .albedo = albedo, .fuzz = fuzz } };
+    }
+
+    pub fn dielectric(ir: SType) Material {
+        return Material{ .Dielectric = Dielectric{ .ir = ir } };
     }
 };
 
@@ -57,5 +62,22 @@ const Metal = struct {
         scattered.* = Ray{ .origin = rec.p, .direction = reflected + f3(self.fuzz) * vec.randomInUnitSphere(rnd, Vec3) };
         attenuation.* = self.albedo;
         return vec.dot(scattered.direction, rec.normal) > 0.0;
+    }
+};
+
+const Dielectric = struct {
+    ir: SType,
+
+    const Self = @This();
+
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
+        attenuation.* = Color{ 1.0, 1.0, 1.0 };
+        const refraction_ratio = if (rec.front_face) (1.0 / self.ir) else self.ir;
+
+        const unit_direction = vec.unit(r_in.direction);
+        const refracted = vec.refract(unit_direction, rec.normal, refraction_ratio);
+
+        scattered.* = Ray{ .origin = rec.p, .direction = refracted };
+        return true;
     }
 };

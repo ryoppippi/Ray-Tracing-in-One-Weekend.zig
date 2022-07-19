@@ -42,7 +42,7 @@ pub const Sphere = struct {
         var root = (-half_b - sqrtd) / a;
         if (root < tMin or tMax < root) {
             root = (-half_b + sqrtd) / a;
-            if (root < tMax or root > tMin) {
+            if (root < tMin or tMax < root) {
                 return false;
             }
         }

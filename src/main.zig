@@ -40,6 +40,7 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
         const is_scattered: bool = switch (rec.mat.*) {
             .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
             .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
+            .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered),
         };
         if (is_scattered) {
             return attenuation * rayColor(scattered, world, rnd, depth - 1);
@@ -67,8 +68,8 @@ pub fn main() anyerror!void {
     defer world.deinit();
 
     const material_ground = Material.lambertian(Color{ 0.8, 0.8, 0.0 });
-    const material_center = Material.lambertian(Color{ 0.7, 0.3, 0.3 });
-    const material_left = Material.metal(Color{ 0.8, 0.8, 0.8 }, 0.3);
+    const material_center = Material.dielectric(1.5);
+    const material_left = Material.dielectric(1.5);
     const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 }, 1.0);
 
     _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
