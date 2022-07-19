@@ -12,6 +12,8 @@ const SType = rtw.SType;
 const HitRecord = hittable.HitRecord;
 const RandGen = rtw.RandGen;
 
+const f3 = rtw.f3;
+
 pub const Material = union(enum) {
     Lambertian: Lambertian,
     Metal: Metal,
@@ -20,8 +22,8 @@ pub const Material = union(enum) {
         return Material{ .Lambertian = Lambertian{ .albedo = albedo } };
     }
 
-    pub fn metal(albedo: Vec3) Material {
-        return Material{ .Metal = Metal{ .albedo = albedo } };
+    pub fn metal(albedo: Vec3, fuzz: SType) Material {
+        return Material{ .Metal = Metal{ .albedo = albedo, .fuzz = fuzz } };
     }
 };
 
@@ -46,11 +48,13 @@ const Lambertian = struct {
 
 const Metal = struct {
     albedo: Color,
+    fuzz: SType,
+
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray) bool {
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
         const reflected = vec.reflect(vec.unit(r_in.direction), rec.normal);
-        scattered.* = Ray{ .origin = rec.p, .direction = reflected };
+        scattered.* = Ray{ .origin = rec.p, .direction = reflected + f3(self.fuzz) * vec.randomInUnitSphere(rnd, Vec3) };
         attenuation.* = self.albedo;
         return vec.dot(scattered.direction, rec.normal) > 0.0;
     }
