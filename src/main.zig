@@ -21,7 +21,6 @@ const HittableList = hittableList.HittableList;
 const Sphere = sphere.Sphere;
 const Camera = camera.Camera;
 const Material = material.Material;
-const Scatter = material.Scatter;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
@@ -36,12 +35,14 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
     }
 
     if (world.*.hit(r, 0.001, infinity, &rec)) {
-        const scatter: Scatter = switch (rec.mat) {
-            .Lambertian => |l| l.scatter(r, rec, rnd),
-            .Metal => |m| m.scatter(r, rec),
+        var scattered: Ray = undefined;
+        var attenuation: Color = undefined;
+        const is_scattered: bool = switch (rec.mat.*) {
+            .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
+            .Metal => |m| m.scatter(r, rec, &attenuation, &scattered),
         };
-        if (scatter.is_scattered) {
-            return scatter.attenuation * rayColor(scatter.ray, world, rnd, depth - 1);
+        if (is_scattered) {
+            return attenuation * rayColor(scattered, world, rnd, depth - 1);
         }
         return Color{ 0.0, 0.0, 0.0 };
     }
@@ -70,10 +71,10 @@ pub fn main() anyerror!void {
     const material_left = Material.metal(Color{ 0.8, 0.8, 0.8 });
     const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 });
 
-    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = material_ground });
-    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = material_center });
-    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = material_left });
-    _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = material_right });
+    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
+    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = &material_center });
+    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = &material_left });
+    _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = &material_right });
 
     // camera
     const cam = Camera.init();
