@@ -69,6 +69,21 @@ pub inline fn randomVec(rnd: *RandGen, comptime T: type) T {
     return dummy;
 }
 
+pub inline fn randomVecInRange(rnd: *RandGen, comptime T: type, min: anytype, max: anytype) T {
+    _ = ensureVector(T);
+    const vs = vsize(T);
+    const vt = vtype(T);
+
+    var dummy = full(T, 0);
+    {
+        var i: u32 = 0;
+        while (i < vs) : (i += 1) {
+            dummy[i] = rtw.getRandomInRange(rnd, vt, min, max);
+        }
+    }
+    return dummy;
+}
+
 pub inline fn randomInUnitSphere(rnd: *RandGen, comptime T: type) T {
     while (true) {
         const p = randomVec(rnd, T);

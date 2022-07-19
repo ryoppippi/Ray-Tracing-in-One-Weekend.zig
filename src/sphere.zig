@@ -20,7 +20,7 @@ const f3 = rtw.f3;
 pub const Sphere = struct {
     center: Point3,
     radius: SType,
-    mat: *const Material,
+    mat: Material,
     const Self = @This();
 
     pub fn hit(

@@ -10,6 +10,7 @@ const hittableList = @import("hittableList.zig");
 const sphere = @import("sphere.zig");
 const camera = @import("camera.zig");
 const material = @import("material.zig");
+const randomScene = @import("randomScene.zig");
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
@@ -25,6 +26,7 @@ const Material = material.Material;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
+const test_allocator = std.testing.allocator;
 
 const infinity = rtw.getInfinity(SType);
 
@@ -38,7 +40,7 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
     if (world.*.hit(r, 0.001, infinity, &rec)) {
         var scattered: Ray = undefined;
         var attenuation: Color = undefined;
-        const is_scattered: bool = switch (rec.mat.*) {
+        const is_scattered: bool = switch (rec.mat) {
             .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
             .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
             .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered, rnd),
@@ -58,35 +60,24 @@ pub fn main() anyerror!void {
     var rnd = RandGen.init(0);
 
     // image
-    const aspect_ratio = 16.0 / 9.0;
-    const image_width: i32 = 400;
+    const aspect_ratio = 3.0 / 2.0;
+    const image_width: i32 = 1200;
     comptime var image_height: i32 = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
-    // const samples_per_pixel: u32 = 100;
-    const samples_per_pixel: i32 = 100;
-    const max_depth: i32 = 20;
+    const samples_per_pixel: i32 = 500;
+    const max_depth: i32 = 50;
 
     // world
     var world = HittableList.init();
+    try randomScene.genWorld(&rnd, &world);
     defer world.deinit();
 
-    const material_ground = Material.lambertian(Color{ 0.8, 0.8, 0.0 });
-    const material_center = Material.lambertian(Color{ 0.1, 0.2, 0.5 });
-    const material_left = Material.dielectric(1.5);
-    const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 }, 0.0);
-
-    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
-    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = &material_center });
-    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = &material_left });
-    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = -0.45, .mat = &material_left });
-    _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = &material_right });
-
     // camera
-    const lookfrom = Point3{ 3, 3, 2 };
-    const lookat = Point3{ 0, 0, -1 };
+    const lookfrom = Point3{ 13, 2, 3 };
+    const lookat = Point3{ 0, 0, 0 };
     const vup = Vec3{ 0, 1, 0 };
     const vfov = 20;
-    const dist_to_focus = vec.len(lookfrom - lookat);
-    const apature = 2.0;
+    const dist_to_focus = 10.0;
+    const apature = 0.1;
     const cam = Camera.init(
         lookfrom,
         lookat,
@@ -111,7 +102,6 @@ pub fn main() anyerror!void {
                     {
                         var s: i32 = 0;
                         while (s < samples_per_pixel) : (s += 1) {
-                            // print("{}%\n", .{(s + samples_per_pixel * i + samples_per_pixel * image_width * j) / ((image_height - j) * image_width * samples_per_pixel)});
                             const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
                             const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
                             const r = cam.getRay(u, v, &rnd);
