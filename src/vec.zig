@@ -79,8 +79,8 @@ pub inline fn randomInUnitSphere(rnd: *RandGen, comptime T: type) T {
 
 pub inline fn randomUnitVector(rnd: *RandGen, comptime T: type) T {
     const vt = vtype(T);
-    const a = rtw.getRandom(rnd, vt) * 2 * math.pi; // 0 ~ 2pi
-    const z = rtw.getRandom(rnd, vt) * 2 - 1; // -1 ~ 1
+    const a = rtw.getRandomInRange(rnd, vt, 2, math.pi);
+    const z = rtw.getRandomInRange(rnd, vt, -1, 1);
     const r = math.sqrt(1 - z * z);
     return T{ r * math.cos(a), r * math.sin(a), z };
 }
@@ -107,21 +107,20 @@ pub inline fn nearZero(v: anytype) bool {
     const T = ensureVector(@TypeOf(v));
     const vsT = vtype(T);
     const s = 1e-8;
-    // const abs_v = abs(v);
-    // return @reduce(.And, abs_v < s); // it does not compile on my M1 mac https://github.com/ziglang/zig/issues/12169
-    const abs = switch (@typeInfo(vsT)) {
-        .ComptimeFloat, .Float => math.fabs,
-        .ComptimeInt, .Int => math.absInt,
+    // return @reduce(.And,  @fabs(v) < s); // it does not compile on my M1 mac https://github.com/ziglang/zig/issues/12169
+    return switch (@typeInfo(vsT)) {
+        .ComptimeFloat, .Float => {
+            {
+                const abs_v = @fabs(v);
+                var i: u32 = 0;
+                while (i < vsize(T)) : (i += 1) {
+                    if (abs_v[i] > s) return false;
+                }
+                return true;
+            }
+        },
         else => @compileError("not implemented for " ++ @typeName(vsT)),
     };
-
-    {
-        var i: u32 = 0;
-        while (i < vsize(T)) : (i += 1) {
-            if (abs(v[i]) > s) return false;
-        }
-        return true;
-    }
 }
 
 pub inline fn refract(uv: anytype, n: anytype, etai_over_etat: anytype) @TypeOf(uv) {
@@ -153,6 +152,22 @@ inline fn ensureVector(comptime T: type) type {
         @compileError("ensureIsTypeVector: type is not a vector");
     }
     return T;
+}
+
+pub inline fn randomInUnitDisk3(comptime T: type, rnd: *RandGen) T {
+    _ = ensureVector(T);
+    if (vsize(T) != 3) {
+        @compileError("randomInUnitDisk3: vector must be 3-dimensional");
+    }
+    while (true) {
+        const p = T{
+            rtw.getRandomInRange(rnd, vtype(T), -1, 1),
+            rtw.getRandomInRange(rnd, vtype(T), -1, 1),
+            0.0,
+        };
+        if (dot(p, p) >= 1.0) continue;
+        return p;
+    }
 }
 
 const expectEqual = std.testing.expectEqual;
@@ -271,4 +286,15 @@ test "ensureVector" {
     const T1 = @TypeOf(v1);
     const T2 = ensureVector(T1);
     try expectEqual(T1, T2);
+}
+
+test "nearZero" {
+    const v1 = @Vector(1, f32){0};
+    try expectEqual(true, nearZero(v1));
+
+    const v2 = @Vector(3, f64){ 0, 0, 1e-10 };
+    try expectEqual(true, nearZero(v2));
+
+    var v3 = @Vector(3, f64){ 0, 2, 1e-10 };
+    try expectEqual(false, nearZero(v3));
 }
