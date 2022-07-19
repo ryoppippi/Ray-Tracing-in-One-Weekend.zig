@@ -20,12 +20,8 @@ const f3 = rtw.f3;
 pub const Sphere = struct {
     center: Point3,
     radius: SType,
-    m: *Material,
+    mat: Material,
     const Self = @This();
-
-    pub fn init(center: Point3, radius: SType, m: *Material) Self {
-        return Self{ .center = center, .radius = radius, .m = m };
-    }
 
     pub fn hit(
         self: Self,
@@ -54,7 +50,7 @@ pub const Sphere = struct {
         rec.*.t = root;
         rec.*.p = r.at(rec.*.t);
         rec.*.normal = (rec.*.p - self.center) / f3(self.radius);
-        rec.*.m = self.m;
+        rec.*.mat = self.mat;
 
         const outward_normal: Vec3 = (rec.*.p - self.center) / f3(self.radius);
         _ = rec.*.set_face_normal(r, outward_normal);

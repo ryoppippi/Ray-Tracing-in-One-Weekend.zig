@@ -97,9 +97,12 @@ pub fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
 }
 
 pub fn reflect(v: anytype, n: anytype) @TypeOf(v) {
-    const vt = ensureVector(@TypeOf(v));
-    _ = ensureVector(@TypeOf(n));
-    return v - full(vt, 2) * dot(v, n) * n;
+    const T = ensureVector(@TypeOf(v));
+    const nT = ensureVector(@TypeOf(n));
+    if (T != nT) {
+        @compileError("reflect: vectors must be of the same type");
+    }
+    return v - full(T, 2 * dot(v, n)) * n;
 }
 
 pub fn nearZero(v: anytype) bool {

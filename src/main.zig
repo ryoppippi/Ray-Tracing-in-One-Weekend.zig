@@ -8,6 +8,7 @@ const hittable = @import("hittable.zig");
 const hittableList = @import("hittableList.zig");
 const sphere = @import("sphere.zig");
 const camera = @import("camera.zig");
+const material = @import("material.zig");
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
@@ -19,6 +20,8 @@ const HitRecord = hittable.HitRecord;
 const HittableList = hittableList.HittableList;
 const Sphere = sphere.Sphere;
 const Camera = camera.Camera;
+const Material = material.Material;
+const Scatter = material.Scatter;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
@@ -32,11 +35,13 @@ fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptim
         return Color{ 0.0, 0.0, 0.0 };
     }
 
-    if (world.hit(r, 0.001, infinity, &rec)) {
-        const scattered: Ray = undefined;
-        const attenuation: Color = undefined;
-        if (rec.mat.scatter(r, rec, attenuation, &scattered)) {
-            return attenuation * rayColor(scattered, world, rnd, depth - 1);
+    if (world.*.hit(r, 0.001, infinity, &rec)) {
+        const scatter: Scatter = switch (rec.mat) {
+            .Lambertian => |l| l.scatter(r, rec, rnd),
+            .Metal => |m| m.scatter(r, rec),
+        };
+        if (scatter.is_scattered) {
+            return scatter.attenuation * rayColor(scatter.ray, world, rnd, depth - 1);
         }
         return Color{ 0.0, 0.0, 0.0 };
     }
@@ -59,8 +64,16 @@ pub fn main() anyerror!void {
     // world
     var world = HittableList.init();
     defer world.deinit();
-    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5 });
-    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100 });
+
+    const material_ground = Material.lambertian(Color{ 0.8, 0.8, 0.0 });
+    const material_center = Material.lambertian(Color{ 0.7, 0.3, 0.3 });
+    const material_left = Material.metal(Color{ 0.8, 0.8, 0.8 });
+    const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 });
+
+    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = material_ground });
+    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = material_center });
+    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = material_left });
+    _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = material_right });
 
     // camera
     const cam = Camera.init();
@@ -68,19 +81,23 @@ pub fn main() anyerror!void {
     // Render
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
-    var j: i32 = image_height - 1;
-    while (0 <= j) : (j -= 1) {
-        var i: i32 = 0;
-        while (i < image_width) : (i += 1) {
-            var pixel_color = Color{ 0, 0, 0 };
-            var s: i32 = 0;
-            while (s < samples_per_pixel) : (s += 1) {
-                const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
-                const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
-                const r = cam.getRay(u, v);
-                pixel_color += rayColor(r, &world, &rnd, max_depth);
+    {
+        var j: i32 = image_height - 1;
+        while (0 <= j) : (j -= 1) {
+            {
+                var i: i32 = 0;
+                while (i < image_width) : (i += 1) {
+                    var pixel_color = Color{ 0, 0, 0 };
+                    var s: i32 = 0;
+                    while (s < samples_per_pixel) : (s += 1) {
+                        const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
+                        const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
+                        const r = cam.getRay(u, v);
+                        pixel_color += rayColor(r, &world, &rnd, max_depth);
+                    }
+                    try color.writeColor(stdout, pixel_color, samples_per_pixel);
+                }
             }
-            try color.writeColor(stdout, pixel_color, samples_per_pixel);
         }
     }
 }

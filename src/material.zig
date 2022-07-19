@@ -12,6 +12,12 @@ const SType = rtw.SType;
 const HitRecord = hittable.HitRecord;
 const RandGen = rtw.RandGen;
 
+pub const Scatter = struct {
+    attenuation: Vec3,
+    ray: Ray,
+    is_scattered: bool,
+};
+
 pub const Material = union(enum) {
     Lambertian: Lambertian,
     Metal: Metal,
@@ -30,17 +36,17 @@ const Lambertian = struct {
 
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, rnd: *RandGen) Scatter {
         _ = r_in;
-        var scatter_direction = rec.normal * vec.randomUnitVector(rnd, Color);
+        var scatter_direction = rec.normal + vec.randomUnitVector(rnd, Color);
 
         if (vec.nearZero(scatter_direction)) {
             scatter_direction = rec.normal;
         }
 
-        scattered.* = Ray{ .origin = rec.p, .direction = scatter_direction };
-        attenuation.* = self.albedo;
-        return true;
+        const scattered = Ray{ .origin = rec.p, .direction = scatter_direction };
+        const attenuation = self.albedo;
+        return Scatter{ .attenuation = attenuation, .ray = scattered, .is_scattered = true };
     }
 };
 
@@ -48,11 +54,11 @@ const Metal = struct {
     albedo: Color,
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
-        _ = rnd;
-        const reflected = vec.reflect(vec.normalize(r_in.direction), rec.normal);
-        scattered.* = Ray{ .origin = rec.p, .direction = reflected };
-        attenuation.* = self.albedo;
-        return vec.dot(scattered.direction, rec.normal) > 0.0;
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord) Scatter {
+        const reflected = vec.reflect(vec.unit(r_in.direction), rec.normal);
+        const scattered = Ray{ .origin = rec.p, .direction = reflected };
+        const attenuation = self.albedo;
+        const is_scattered = vec.dot(scattered.direction, rec.normal) > 0.0;
+        return Scatter{ .attenuation = attenuation, .ray = scattered, .is_scattered = is_scattered };
     }
 };

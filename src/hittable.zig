@@ -17,7 +17,7 @@ const dot = vec.dot;
 pub const HitRecord = struct {
     p: Point3,
     normal: Vec3,
-    mat: *Material,
+    mat: Material,
     t: SType,
     front_face: bool,
     const Self = @This();
