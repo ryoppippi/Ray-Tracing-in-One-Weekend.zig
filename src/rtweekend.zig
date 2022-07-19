@@ -23,14 +23,6 @@ pub fn getInfinity(comptime T: type) T {
     };
 }
 
-pub fn degreeToRadian(degree: anytype) @TypeOf(degree) {
-    const T = @TypeOf(degree);
-    return switch (@typeInfo(T)) {
-        .ComptimeFloat, .Float, .ComptimeInt, .Int => degree * math.pi / 180.0,
-        else => @compileError("not implemented for " ++ @typeName(T)),
-    };
-}
-
 pub fn getRandom(rnd: *RandGen, comptime T: type) T {
     return switch (@typeInfo(T)) {
         .ComptimeFloat, .Float => rnd.*.random().float(T),

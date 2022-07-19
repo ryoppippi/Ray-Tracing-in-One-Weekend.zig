@@ -64,18 +64,22 @@ pub fn main() anyerror!void {
     const max_depth: u32 = 50;
 
     // world
-    const R = math.cos(math.pi / 4.0);
     var world = HittableList.init();
     defer world.deinit();
 
-    const material_left = Material.lambertian(Color{ 0.0, 0.0, 1.0 });
-    const material_right = Material.lambertian(Color{ 1.0, 0.0, 0.0 });
+    const material_ground = Material.lambertian(Color{ 0.8, 0.8, 0.0 });
+    const material_center = Material.lambertian(Color{ 0.1, 0.2, 0.5 });
+    const material_left = Material.dielectric(1.5);
+    const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 }, 0.0);
 
-    _ = try world.add(Sphere{ .center = Point3{ -R, 0, -1 }, .radius = R, .mat = &material_left });
-    _ = try world.add(Sphere{ .center = Point3{ R, 0, -1 }, .radius = R, .mat = &material_right });
+    _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
+    _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = &material_center });
+    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = 0.5, .mat = &material_left });
+    _ = try world.add(Sphere{ .center = Point3{ -1, 0, -1 }, .radius = -0.45, .mat = &material_left });
+    _ = try world.add(Sphere{ .center = Point3{ 1, 0, -1 }, .radius = 0.5, .mat = &material_right });
 
     // camera
-    const cam = Camera.init(90.0, aspect_ratio);
+    const cam = Camera.init(Point3{ -2, 2, 1 }, Point3{ 0, 0, -1 }, Vec3{ 0, 1, 0 }, 90, aspect_ratio);
 
     // Render
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
