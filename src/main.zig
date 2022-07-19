@@ -68,9 +68,9 @@ pub fn main() anyerror!void {
     defer world.deinit();
 
     const material_ground = Material.lambertian(Color{ 0.8, 0.8, 0.0 });
-    const material_center = Material.dielectric(1.5);
+    const material_center = Material.lambertian(Color{ 0.1, 0.2, 0.5 });
     const material_left = Material.dielectric(1.5);
-    const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 }, 1.0);
+    const material_right = Material.metal(Color{ 0.8, 0.6, 0.2 }, 0.0);
 
     _ = try world.add(Sphere{ .center = Point3{ 0, -100.5, -1 }, .radius = 100, .mat = &material_ground });
     _ = try world.add(Sphere{ .center = Point3{ 0, 0, -1 }, .radius = 0.5, .mat = &material_center });
