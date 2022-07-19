@@ -85,7 +85,7 @@ pub fn main() anyerror!void {
     const lookat = Point3{ 0, 0, -1 };
     const vup = Vec3{ 0, 1, 0 };
     const vfov = 20;
-    const dist_to_focus = vec.vlen(lookfrom - lookat);
+    const dist_to_focus = vec.len(lookfrom - lookat);
     const apature = 2.0;
     const cam = Camera.init(
         lookfrom,

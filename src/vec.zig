@@ -14,7 +14,7 @@ pub inline fn vtype(comptime T: type) type {
     return @typeInfo(T).Vector.child;
 }
 
-pub inline fn vlen(v: anytype) vtype(@TypeOf(v)) {
+pub inline fn len(v: anytype) vtype(@TypeOf(v)) {
     _ = ensureVector(@TypeOf(v));
     return math.sqrt(dot(v, v));
 }
@@ -44,7 +44,7 @@ pub inline fn cross3(v1: anytype, v2: anytype) @TypeOf(v1) {
 
 pub inline fn unit(v: anytype) @TypeOf(v) {
     const T = @TypeOf(v);
-    return v / full(T, vlen(v));
+    return v / full(T, len(v));
 }
 
 pub inline fn full(comptime T: type, n: anytype) T {
@@ -188,19 +188,19 @@ test "immutable vector vsize" {
     try expectEqual(3, vsize(@TypeOf(v1)));
 }
 
-test "vector vlen" {
+test "vector len" {
     const v1 = @Vector(1, f32){5};
-    try expectEqual(@as(vtype(@TypeOf(v1)), math.sqrt(5 * 5)), vlen(v1));
+    try expectEqual(@as(vtype(@TypeOf(v1)), math.sqrt(5 * 5)), len(v1));
 
     const v2 = @Vector(2, f32){ 2, 2 };
-    try expectEqual(math.sqrt(@as(vtype(@TypeOf(v2)), (2 * 2 + 2 * 2))), vlen(v2));
+    try expectEqual(math.sqrt(@as(vtype(@TypeOf(v2)), (2 * 2 + 2 * 2))), len(v2));
 }
 
-test "immutable vector vlen" {
+test "immutable vector len" {
     var v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     v1 += v2;
-    try expectEqual(math.sqrt(@as(vtype(@TypeOf(v1)), (2 * 2 + 7 * 7 + 10 * 10))), vlen(v1));
+    try expectEqual(math.sqrt(@as(vtype(@TypeOf(v1)), (2 * 2 + 7 * 7 + 10 * 10))), len(v1));
 }
 
 test "vector vtype" {
