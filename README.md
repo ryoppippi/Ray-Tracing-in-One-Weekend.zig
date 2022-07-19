@@ -17,6 +17,7 @@ zig build -Drelease-fast=true
 - Chip: Apple M1
 - Memory: 16GB
 - OS: macOS 12.4（21F79）
+- Zig: 0.10.0-dev.3007+6ba2fb3db
 
 ```sh
 ________________________________________________________
