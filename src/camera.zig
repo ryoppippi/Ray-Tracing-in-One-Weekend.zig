@@ -1,5 +1,5 @@
 const std = @import("std");
-const math = @import("math");
+const math = std.math;
 const rtw = @import("rtweekend.zig");
 const ray = @import("ray.zig");
 
@@ -23,10 +23,15 @@ pub const Camera = struct {
 
     const Self = @This();
 
-    pub fn init() Self {
-        const aspect_ratio = 16.0 / 9.0;
-        const viewport_height = 2.0;
+    pub fn init(
+        vfov: SType, // vertical field-of-view in degrees
+        aspect_ratio: SType,
+    ) Self {
+        const theta = rtw.degreeToRadian(vfov);
+        const h = math.tan(theta / 2);
+        const viewport_height = 2.0 * h;
         const viewport_width = aspect_ratio * viewport_height;
+
         const focal_length = 1.0;
 
         const origin = Point3{ 0.0, 0.0, 0.0 };
