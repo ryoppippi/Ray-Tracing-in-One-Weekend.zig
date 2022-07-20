@@ -32,7 +32,7 @@ pub fn genWorld(rnd: *RandGen, world: *HittableList) anyerror!void {
                 var b: i32 = -11;
                 while (b < 11) : (b += 1) {
                     {
-                        var choose_mat = rtw.getRandom(rnd, SType);
+                        const choose_mat = rtw.getRandom(rnd, SType);
                         const center = Point3{
                             @intToFloat(SType, a) + 0.9 * rtw.getRandom(rnd, SType),
                             0.2,
@@ -40,26 +40,22 @@ pub fn genWorld(rnd: *RandGen, world: *HittableList) anyerror!void {
                         };
                         if (vec.len(center - Point3{ 4.0, 0.2, 0.0 }) > 0.9) {
                             // generate a random material
-                            if (choose_mat < 0.8) {
-                                // diffuse
+                            const mat = if (choose_mat < 0.8) diffuse: {
                                 const albedo = vec.randomVecInRange(rnd, Color, 0, 1) * vec.randomVecInRange(rnd, Color, 0, 1);
                                 const diffuse_material = Material.lambertian(albedo);
-                                const diffuse_sphere = Sphere{ .center = center, .radius = 0.2, .mat = diffuse_material };
-                                _ = try world.add(diffuse_sphere);
-                            } else if (choose_mat < 0.95) {
-                                // metal
+                                break :diffuse diffuse_material;
+                            } else if (choose_mat < 0.95) metal: {
                                 const albedo = vec.randomVecInRange(rnd, Color, 0.5, 1.0);
                                 const fuzz = rtw.getRandomInRange(rnd, SType, 0.0, 0.5);
                                 const metal_material = Material.metal(albedo, fuzz);
-                                const metal_sphere = Sphere{ .center = center, .radius = 0.2, .mat = metal_material };
-                                _ = try world.add(metal_sphere);
-                            } else {
-                                // glass
+                                break :metal metal_material;
+                            } else glass: {
                                 const ir = 1.5;
                                 const glass_material = Material.dielectric(ir);
-                                const glass_sphere = Sphere{ .center = center, .radius = 0.2, .mat = glass_material };
-                                _ = try world.add(glass_sphere);
-                            }
+                                break :glass glass_material;
+                            };
+                            const new_sphere = Sphere{ .center = center, .radius = 0.2, .mat = mat };
+                            _ = try world.add(new_sphere);
                         }
                     }
                 }
