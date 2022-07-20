@@ -7,7 +7,6 @@ const hittable = @import("hittable.zig");
 const sphere = @import("sphere.zig");
 
 const ArrayList = std.ArrayList;
-const test_allocator = std.testing.allocator;
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
@@ -19,15 +18,21 @@ const Sphere = sphere.Sphere;
 
 pub const HittableList = struct {
     objects: ArrayList(Sphere),
+    arena: @TypeOf(std.heap.ArenaAllocator.init(std.heap.page_allocator)),
     // original is  std::vector<shared_ptr<hittable>> objects; but we do not use inheritance
     const Self = @This();
 
     pub fn init() Self {
-        return Self{ .objects = ArrayList(Sphere).init(test_allocator) };
+        var r = Self{
+            .objects = undefined,
+            .arena = std.heap.ArenaAllocator.init(std.heap.page_allocator),
+        };
+        r.objects = ArrayList(Sphere).init(r.arena.allocator());
+        return r;
     }
 
     pub fn deinit(self: *Self) void {
-        self.*.objects.deinit();
+        self.*.arena.deinit();
     }
 
     pub fn add(self: *Self, s: Sphere) anyerror!*Self {
