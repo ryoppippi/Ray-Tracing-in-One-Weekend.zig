@@ -196,7 +196,7 @@ test "vector vsize" {
     try expectEqual(2, vsize(@TypeOf(v2)));
 }
 
-test "immutable vector vsize" {
+test "mutable vector vsize" {
     var v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     v1 += v2;
@@ -211,7 +211,7 @@ test "vector len" {
     try expectEqual(math.sqrt(@as(vtype(@TypeOf(v2)), (2 * 2 + 2 * 2))), len(v2));
 }
 
-test "immutable vector len" {
+test "mutable vector len" {
     var v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     v1 += v2;
@@ -226,7 +226,7 @@ test "vector vtype" {
     try expectEqual(i8, vtype(@TypeOf(v2)));
 }
 
-test "immutable vector vtype" {
+test "mutable vector vtype" {
     var v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     v1 += v2;
@@ -240,7 +240,7 @@ test "vector dot" {
     try expectEqual(answer, dot(v1, v2));
 }
 
-test "immutable vector dot" {
+test "mutable vector dot" {
     var v1 = @Vector(3, f32){ 1, 2, 3 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     v1 += v2;
@@ -255,7 +255,7 @@ test "vector cross" {
     try expectEqual(answer, cross3(v1, v2));
 }
 
-test "immutable vector cross" {
+test "mutable vector cross" {
     var v1 = @Vector(3, f32){ 0, 0, 0 };
     const v2 = @Vector(3, f32){ 1, 5, 7 };
     const dummy = @Vector(3, f32){ 1, 2, 3 };
@@ -279,7 +279,7 @@ test "vector unit" {
     try expectEqual(answer2, unit(v2));
 }
 
-test "immutable vector unit" {
+test "mutable vector unit" {
     var v1 = @Vector(1, f32){3};
     const answer = @Vector(1, f32){1};
     v1 += @Vector(1, f32){0};
