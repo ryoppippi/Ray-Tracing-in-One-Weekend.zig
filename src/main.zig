@@ -103,10 +103,7 @@ pub const Config = struct {
     aperture: f32 = 0.1,
 };
 
-pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror!void {
-    var buffered_writer = std.io.bufferedWriter(std.io.getStdOut().writer());
-    // defer buffered_writer.flush() catch std.debug.print("flush error", .{});
-    var writer = buffered_writer.writer();
+pub fn render(comptime config: Config, allocator: std.mem.Allocator, writer: anytype) anyerror!void {
     var rnd = RandGen.init(0);
 
     // image
@@ -169,21 +166,31 @@ pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror!vo
 }
 
 pub fn main() anyerror!void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
     var allocator = arena.allocator();
 
+    var buffered_writer = std.io.bufferedWriter(std.io.getStdOut().writer());
+    var writer = buffered_writer.writer();
+
     const config = Config{};
-    _ = try render(config, allocator);
+    _ = try render(config, allocator, writer);
+    try buffered_writer.flush();
 }
 
 test "small rendering test" {
-    const test_allocator = std.testing.allocator;
+    // const test_allocator = std.testing.allocator;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    defer arena.deinit();
+    var test_allocator = arena.allocator();
+    const stdout = std.io.getStdOut().writer();
 
     const config = Config{
         .aspect_ratio = 3.0 / 2.0,
         .image_width = 45,
         .samples_per_pixel = 20,
     };
-    _ = try render(config, test_allocator);
+    _ = try render(config, test_allocator, &stdout);
 }
