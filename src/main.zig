@@ -39,7 +39,7 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
         var rec: HitRecord = undefined;
 
         var i: isize = 0;
-        while (i < depth) : (i += 1) {
+        return while (i < depth) : (i += 1) {
             const world_hit = world.hit(scattered, 0.001, infinity);
             rec = world_hit.rec;
             if (world_hit.is_hit) {
@@ -53,17 +53,15 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
                 const attenuation = s.attenuation;
                 if (is_scattered) {
                     return_color *= attenuation;
-                    continue;
-                }
-                return black;
+                } else break black;
+            } else {
+                const unit_direction = vec.unit(scattered.direction);
+                const t = 0.5 * (unit_direction[1] + 1.0);
+                return_color *= (f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 });
+                break return_color;
             }
-            const unit_direction = vec.unit(scattered.direction);
-            const t = 0.5 * (unit_direction[1] + 1.0);
-            return_color *= (f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 });
-            return return_color;
-        }
+        } else black;
     }
-    return black;
 
     // if (depth <= 0) {
     //     return Color{ 0.0, 0.0, 0.0 };
