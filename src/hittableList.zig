@@ -17,21 +17,15 @@ const HitRecord = hittable.HitRecord;
 
 pub const HittableList = struct {
     objects: ArrayList(Hittable),
-    arena: @TypeOf(std.heap.ArenaAllocator.init(std.heap.page_allocator)),
-    // original is  std::vector<shared_ptr<hittable>> objects; but we do not use inheritance
+
     const Self = @This();
 
-    pub fn init() Self {
-        var r = Self{
-            .objects = undefined,
-            .arena = std.heap.ArenaAllocator.init(std.heap.page_allocator),
-        };
-        r.objects = ArrayList(Hittable).init(r.arena.allocator());
-        return r;
+    pub fn init(allocator: std.mem.Allocator) Self {
+        return Self{ .objects = ArrayList(Hittable).init(allocator) };
     }
 
     pub fn deinit(self: *Self) void {
-        self.*.arena.deinit();
+        self.*.objects.deinit();
     }
 
     pub fn add(self: *Self, s: Hittable) anyerror!*Self {

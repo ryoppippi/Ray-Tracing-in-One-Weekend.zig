@@ -91,6 +91,8 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
 pub fn main() anyerror!void {
     const stdout = std.io.getStdOut().writer();
     var rnd = RandGen.init(0);
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
 
     // image
     const aspect_ratio = 3.0 / 2.0;
@@ -100,9 +102,9 @@ pub fn main() anyerror!void {
     const max_depth: isize = 50;
 
     // world
-    var world = HittableList.init();
-    try randomScene.genWorld(&rnd, &world);
+    var world = HittableList.init(arena.allocator());
     defer world.deinit();
+    try randomScene.genWorld(&rnd, &world);
 
     // camera
     const lookfrom = Point3{ 13, 2, 3 };
