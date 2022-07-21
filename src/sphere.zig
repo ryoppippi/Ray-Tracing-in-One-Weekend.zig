@@ -23,13 +23,20 @@ pub const Sphere = struct {
     mat: Material,
     const Self = @This();
 
+    const ReturnHitStruct = struct {
+        is_hit: bool,
+        rec: HitRecord,
+    };
+
     pub fn hit(
         self: Self,
         r: Ray,
         t_min: SType,
         t_max: SType,
-    ) ReturnS {
+    ) ReturnHitStruct {
         var rec: HitRecord = undefined;
+
+        const false_return = ReturnHitStruct{ .is_hit = false, .rec = undefined };
 
         const oc = r.origin - self.center;
         const a = dot(r.direction, r.direction);
@@ -56,12 +63,6 @@ pub const Sphere = struct {
         const outward_normal: Vec3 = (rec.p - self.center) / f3(self.radius);
         _ = rec.set_face_normal(r, outward_normal);
 
-        return ReturnS{ .is_hit = true, .rec = rec };
+        return .{ .is_hit = true, .rec = rec };
     }
-
-    const ReturnS = struct {
-        is_hit: bool,
-        rec: HitRecord,
-    };
-    const false_return = ReturnS{ .is_hit = false, .rec = undefined };
 };
