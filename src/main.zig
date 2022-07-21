@@ -39,7 +39,7 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
         var scattered: Ray = r;
         var rec: HitRecord = undefined;
 
-        var i: i32 = 0;
+        var i: isize = 0;
         while (i < depth) : (i += 1) {
             const world_hit = world.hit(scattered, 0.001, infinity);
             rec = world_hit.rec;
@@ -94,10 +94,10 @@ pub fn main() anyerror!void {
 
     // image
     const aspect_ratio = 3.0 / 2.0;
-    const image_width: i32 = 1200;
-    comptime var image_height: i32 = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
-    const samples_per_pixel: i32 = 500;
-    const max_depth: i32 = 50;
+    const image_width: isize = 1200;
+    comptime var image_height: isize = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
+    const samples_per_pixel: isize = 500;
+    const max_depth: isize = 50;
 
     // world
     var world = HittableList.init();
@@ -125,15 +125,15 @@ pub fn main() anyerror!void {
     try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
     {
-        var j: i32 = image_height - 1;
+        var j: isize = image_height - 1;
         while (0 <= j) : (j -= 1) {
             debug.print("{d}%\n", .{@round(@intToFloat(f16, image_height - j) / @intToFloat(f16, image_height - 1) * 100)});
             {
-                var i: i32 = 0;
+                var i: isize = 0;
                 while (i < image_width) : (i += 1) {
                     var pixel_color = Color{ 0, 0, 0 };
                     {
-                        var s: i32 = 0;
+                        var s: isize = 0;
                         while (s < samples_per_pixel) : (s += 1) {
                             const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
                             const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);

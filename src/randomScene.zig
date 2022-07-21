@@ -25,10 +25,10 @@ pub fn genWorld(rnd: *RandGen, world: *HittableList) anyerror!void {
     _ = try world.add(ground_sphere);
 
     {
-        var a: i32 = -11;
+        var a: isize = -11;
         while (a < 11) : (a += 1) {
             {
-                var b: i32 = -11;
+                var b: isize = -11;
                 while (b < 11) : (b += 1) {
                     {
                         const choose_mat = rtw.getRandom(rnd, SType);
