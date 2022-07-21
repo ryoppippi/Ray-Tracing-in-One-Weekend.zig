@@ -27,7 +27,6 @@ const Scatter = material.Scatter;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
-const test_allocator = std.testing.allocator;
 
 const infinity = rtw.getInfinity(SType);
 
@@ -88,31 +87,47 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
     // return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
-pub fn main() anyerror!void {
-    const stdout = std.io.getStdOut().writer();
+pub const Config = struct {
+    // image config
+    aspect_ratio: f32 = 3.0 / 2.0,
+    image_width: isize = 1200,
+    samples_per_pixel: isize = 500,
+    max_depth: isize = 50,
+
+    // camera config
+    lookfrom: Point3 = Point3{ 13, 2, 3 },
+    lookat: Point3 = Point3{ 0, 0, 0 },
+    vup: Vec3 = Vec3{ 0, 1, 0 },
+    vfov: f32 = 20.0,
+    dist_to_focus: f32 = 10.0,
+    aperture: f32 = 0.1,
+};
+
+pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror!void {
+    var buffered_writer = std.io.bufferedWriter(std.io.getStdOut().writer());
+    // defer buffered_writer.flush() catch std.debug.print("flush error", .{});
+    var writer = buffered_writer.writer();
     var rnd = RandGen.init(0);
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena.deinit();
 
     // image
-    const aspect_ratio = 3.0 / 2.0;
-    const image_width: isize = 1200;
+    const aspect_ratio = config.aspect_ratio;
+    const image_width: isize = config.image_width;
     comptime var image_height: isize = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
-    const samples_per_pixel: isize = 500;
-    const max_depth: isize = 50;
+    const samples_per_pixel: isize = config.samples_per_pixel;
+    const max_depth: isize = config.max_depth;
 
     // world
-    var world = HittableList.init(arena.allocator());
+    var world = HittableList.init(allocator);
     defer world.deinit();
     try randomScene.genWorld(&rnd, &world);
 
     // camera
-    const lookfrom = Point3{ 13, 2, 3 };
-    const lookat = Point3{ 0, 0, 0 };
-    const vup = Vec3{ 0, 1, 0 };
-    const vfov = 20;
-    const dist_to_focus = 10.0;
-    const apature = 0.1;
+    const lookfrom = config.lookfrom;
+    const lookat = config.lookat;
+    const vup = config.vup;
+    const vfov = config.vfov;
+    const dist_to_focus = config.dist_to_focus;
+    const apature = config.aperture;
     const cam = Camera.init(
         lookfrom,
         lookat,
@@ -124,7 +139,7 @@ pub fn main() anyerror!void {
     );
 
     // Render
-    try stdout.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
+    try writer.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
     {
         var j: isize = image_height - 1;
@@ -143,10 +158,32 @@ pub fn main() anyerror!void {
                             pixel_color += rayColor(r, world, &rnd, max_depth);
                         }
                     }
-                    try color.writeColor(stdout, pixel_color, samples_per_pixel);
+                    const result = color.writeColor(pixel_color, samples_per_pixel);
+                    try writer.print("{d} {d} {d}\n", .{ result[0], result[1], result[2] });
                 }
             }
         }
     }
     debug.print("done", .{});
+    try buffered_writer.flush();
+}
+
+pub fn main() anyerror!void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+
+    const config = Config{};
+    _ = try render(config, allocator);
+}
+
+test "small rendering test" {
+    const test_allocator = std.testing.allocator;
+
+    const config = Config{
+        .aspect_ratio = 3.0 / 2.0,
+        .image_width = 45,
+        .samples_per_pixel = 20,
+    };
+    _ = try render(config, test_allocator);
 }
