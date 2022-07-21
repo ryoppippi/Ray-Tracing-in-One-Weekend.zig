@@ -40,20 +40,25 @@ pub const HittableList = struct {
         return self;
     }
 
-    pub fn hit(self: *Self, r: Ray, t_min: SType, t_max: SType, rec: *HitRecord) bool {
-        var temp_rec: HitRecord = undefined;
+    pub fn hit(self: Self, r: Ray, t_min: SType, t_max: SType) HitReturn {
+        var rec: HitRecord = undefined;
         var hit_anything: bool = false;
         var closest_so_far = t_max;
 
-        for (self.*.objects.items) |object| {
-            if (object.hit(r, t_min, closest_so_far, &temp_rec)) {
+        for (self.objects.items) |object| {
+            const temp_hit = object.hit(r, t_min, closest_so_far);
+            const temp_rec = temp_hit.rec;
+            if (temp_hit.is_hit) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
-                rec.* = temp_rec;
+                rec = temp_rec;
             }
         }
-        return hit_anything;
+        return HitReturn{ .is_hit = hit_anything, .rec = rec };
     }
 
-    pub fn clear() void {}
+    const HitReturn: type = struct {
+        is_hit: bool,
+        rec: HitRecord,
+    };
 };

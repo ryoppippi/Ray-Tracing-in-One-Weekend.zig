@@ -14,6 +14,12 @@ const RandGen = rtw.RandGen;
 
 const f3 = rtw.f3;
 
+pub const Scatter = struct {
+    attenuation: Color,
+    scattered: Ray,
+    is_scattered: bool,
+};
+
 pub const Material = union(enum) {
     Lambertian: Lambertian,
     Metal: Metal,
@@ -37,7 +43,7 @@ const Lambertian = struct {
 
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, rnd: *RandGen) Scatter {
         _ = r_in;
         var scatter_direction = rec.normal + vec.randomUnitVector(rnd, Color);
 
@@ -45,9 +51,10 @@ const Lambertian = struct {
             scatter_direction = rec.normal;
         }
 
-        scattered.* = Ray{ .origin = rec.p, .direction = scatter_direction };
-        attenuation.* = self.albedo;
-        return true;
+        const scattered = Ray{ .origin = rec.p, .direction = scatter_direction };
+        const attenuation = self.albedo;
+        const is_scattered = true;
+        return Scatter{ .attenuation = attenuation, .scattered = scattered, .is_scattered = is_scattered };
     }
 };
 
@@ -57,11 +64,12 @@ const Metal = struct {
 
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, rnd: *RandGen) Scatter {
         const reflected = vec.reflect(vec.unit(r_in.direction), rec.normal);
-        scattered.* = Ray{ .origin = rec.p, .direction = reflected + f3(self.fuzz) * vec.randomInUnitSphere(rnd, Vec3) };
-        attenuation.* = self.albedo;
-        return vec.dot(scattered.direction, rec.normal) > 0.0;
+        const scattered = Ray{ .origin = rec.p, .direction = reflected + f3(self.fuzz) * vec.randomInUnitSphere(rnd, Vec3) };
+        const attenuation = self.albedo;
+        const is_scattered = vec.dot(scattered.direction, rec.normal) > 0.0;
+        return Scatter{ .attenuation = attenuation, .scattered = scattered, .is_scattered = is_scattered };
     }
 };
 
@@ -70,8 +78,8 @@ const Dielectric = struct {
 
     const Self = @This();
 
-    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, attenuation: *Color, scattered: *Ray, rnd: *RandGen) bool {
-        attenuation.* = Color{ 1.0, 1.0, 1.0 };
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, rnd: *RandGen) Scatter {
+        const attenuation = Color{ 1.0, 1.0, 1.0 };
         const refraction_ratio = if (rec.front_face) (1.0 / self.ir) else self.ir;
 
         const unit_direction = vec.unit(r_in.direction);
@@ -84,9 +92,10 @@ const Dielectric = struct {
             false => vec.refract(unit_direction, rec.normal, refraction_ratio),
         };
 
-        scattered.* = Ray{ .origin = rec.p, .direction = direction };
+        const scattered = Ray{ .origin = rec.p, .direction = direction };
+        const is_scattered = true;
 
-        return true;
+        return Scatter{ .attenuation = attenuation, .scattered = scattered, .is_scattered = is_scattered };
     }
 
     fn reflectance(self: Self, cosine: SType, ref_idx: SType) SType {

@@ -23,6 +23,7 @@ const HittableList = hittableList.HittableList;
 const Sphere = sphere.Sphere;
 const Camera = camera.Camera;
 const Material = material.Material;
+const Scatter = material.Scatter;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
@@ -30,29 +31,61 @@ const test_allocator = std.testing.allocator;
 
 const infinity = rtw.getInfinity(SType);
 
-fn rayColor(r: Ray, world: *HittableList, rnd: *RandGen, comptime depth: comptime_int) Color {
-    var rec: HitRecord = undefined;
+fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime_int) Color {
+    const black: Color = Color{ 0.0, 0.0, 0.0 };
 
-    if (depth <= 0) {
-        return Color{ 0.0, 0.0, 0.0 };
-    }
+    {
+        var return_color = Color{ 1.0, 1.0, 1.0 };
+        var scattered: Ray = r;
+        var rec: HitRecord = undefined;
 
-    if (world.*.hit(r, 0.001, infinity, &rec)) {
-        var scattered: Ray = undefined;
-        var attenuation: Color = undefined;
-        const is_scattered: bool = switch (rec.mat) {
-            .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
-            .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
-            .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered, rnd),
-        };
-        if (is_scattered) {
-            return attenuation * rayColor(scattered, world, rnd, depth - 1);
+        var i: i32 = 0;
+        while (i < depth) : (i += 1) {
+            const world_hit = world.hit(scattered, 0.001, infinity);
+            rec = world_hit.rec;
+            if (world_hit.is_hit) {
+                const s: Scatter = switch (rec.mat) {
+                    .Lambertian => |l| l.scatter(scattered, rec, rnd),
+                    .Metal => |m| m.scatter(scattered, rec, rnd),
+                    .Dielectric => |d| d.scatter(scattered, rec, rnd),
+                };
+                const is_scattered = s.is_scattered;
+                scattered = s.scattered;
+                const attenuation = s.attenuation;
+                if (is_scattered) {
+                    return_color *= attenuation;
+                    continue;
+                }
+                return black;
+            }
+            const unit_direction = vec.unit(scattered.direction);
+            const t = 0.5 * (unit_direction[1] + 1.0);
+            return_color *= (f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 });
+            return return_color;
         }
-        return Color{ 0.0, 0.0, 0.0 };
     }
-    const unit_direction = vec.unit(r.direction);
-    const t = 0.5 * (unit_direction[1] + 1.0);
-    return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
+    return black;
+
+    // if (depth <= 0) {
+    //     return Color{ 0.0, 0.0, 0.0 };
+    // }
+    //
+    // if (world.*.hit(r, 0.001, infinity, &rec)) {
+    //     var scattered: Ray = undefined;
+    //     var attenuation: Color = undefined;
+    //     const is_scattered: bool = switch (rec.mat) {
+    //         .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
+    //         .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
+    //         .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered, rnd),
+    //     };
+    //     if (is_scattered) {
+    //         return attenuation * rayColor(scattered, world, rnd, depth - 1);
+    //     }
+    //     return Color{ 0.0, 0.0, 0.0 };
+    // }
+    // const unit_direction = vec.unit(r.direction);
+    // const t = 0.5 * (unit_direction[1] + 1.0);
+    // return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
 pub fn main() anyerror!void {
@@ -105,7 +138,7 @@ pub fn main() anyerror!void {
                             const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
                             const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
                             const r = cam.getRay(u, v, &rnd);
-                            pixel_color += rayColor(r, &world, &rnd, max_depth);
+                            pixel_color += rayColor(r, world, &rnd, max_depth);
                         }
                         try color.writeColor(stdout, pixel_color, samples_per_pixel);
                     }

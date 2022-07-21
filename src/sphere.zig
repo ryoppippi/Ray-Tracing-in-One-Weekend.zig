@@ -26,35 +26,42 @@ pub const Sphere = struct {
     pub fn hit(
         self: Self,
         r: Ray,
-        tMin: SType,
-        tMax: SType,
-        rec: *HitRecord,
-    ) bool {
+        t_min: SType,
+        t_max: SType,
+    ) ReturnS {
+        var rec: HitRecord = undefined;
+
         const oc = r.origin - self.center;
         const a = dot(r.direction, r.direction);
         const half_b = dot(oc, r.direction);
         const c = dot(oc, oc) - self.radius * self.radius;
 
         const discriminant = half_b * half_b - a * c;
-        if (discriminant < 0) return false;
+        if (discriminant < 0) return false_return;
         const sqrtd = math.sqrt(discriminant);
 
         var root = (-half_b - sqrtd) / a;
-        if (root < tMin or tMax < root) {
+        if (root < t_min or t_max < root) {
             root = (-half_b + sqrtd) / a;
-            if (root < tMin or tMax < root) {
-                return false;
+            if (root < t_min or t_max < root) {
+                return false_return;
             }
         }
 
-        rec.*.t = root;
-        rec.*.p = r.at(rec.*.t);
-        rec.*.normal = (rec.*.p - self.center) / f3(self.radius);
-        rec.*.mat = self.mat;
+        rec.t = root;
+        rec.p = r.at(rec.t);
+        rec.normal = (rec.p - self.center) / f3(self.radius);
+        rec.mat = self.mat;
 
-        const outward_normal: Vec3 = (rec.*.p - self.center) / f3(self.radius);
-        _ = rec.*.set_face_normal(r, outward_normal);
+        const outward_normal: Vec3 = (rec.p - self.center) / f3(self.radius);
+        _ = rec.set_face_normal(r, outward_normal);
 
-        return true;
+        return ReturnS{ .is_hit = true, .rec = rec };
     }
+
+    const ReturnS = struct {
+        is_hit: bool,
+        rec: HitRecord,
+    };
+    const false_return = ReturnS{ .is_hit = false, .rec = undefined };
 };
