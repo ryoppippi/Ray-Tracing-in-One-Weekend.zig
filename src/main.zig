@@ -140,8 +140,8 @@ pub fn main() anyerror!void {
                             const r = cam.getRay(u, v, &rnd);
                             pixel_color += rayColor(r, world, &rnd, max_depth);
                         }
-                        try color.writeColor(stdout, pixel_color, samples_per_pixel);
                     }
+                    try color.writeColor(stdout, pixel_color, samples_per_pixel);
                 }
             }
         }
