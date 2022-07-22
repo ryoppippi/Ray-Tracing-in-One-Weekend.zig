@@ -80,27 +80,6 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, depth: usize) Color {
             }
         } else black;
     }
-
-    // if (depth <= 0) {
-    //     return Color{ 0.0, 0.0, 0.0 };
-    // }
-    //
-    // if (world.*.hit(r, 0.001, infinity, &rec)) {
-    //     var scattered: Ray = undefined;
-    //     var attenuation: Color = undefined;
-    //     const is_scattered: bool = switch (rec.mat) {
-    //         .Lambertian => |l| l.scatter(r, rec, &attenuation, &scattered, rnd),
-    //         .Metal => |m| m.scatter(r, rec, &attenuation, &scattered, rnd),
-    //         .Dielectric => |d| d.scatter(r, rec, &attenuation, &scattered, rnd),
-    //     };
-    //     if (is_scattered) {
-    //         return attenuation * rayColor(scattered, world, rnd, depth - 1);
-    //     }
-    //     return Color{ 0.0, 0.0, 0.0 };
-    // }
-    // const unit_direction = vec.unit(r.direction);
-    // const t = 0.5 * (unit_direction[1] + 1.0);
-    // return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
 fn eqf(context: void, _: WorkerStruct, _: WorkerStruct) Order {
