@@ -1,5 +1,3 @@
-pub const io_mode = .evented;
-
 const std = @import("std");
 const math = std.math;
 const debug = std.debug;
@@ -33,8 +31,11 @@ const Scatter = material.Scatter;
 
 const dot = vec.dot;
 const f3 = rtw.f3;
+const print = rtw.debugPrint;
 
 const infinity = rtw.getInfinity(SType);
+
+pub const io_mode = .evented;
 
 pub const Config = struct {
     // image config
@@ -52,7 +53,7 @@ pub const Config = struct {
     aperture: f32 = 0.1,
 };
 
-fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, depth: usize) Color {
+inline fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, depth: usize) Color {
     const black: Color = Color{ 0.0, 0.0, 0.0 };
 
     {
@@ -94,18 +95,43 @@ const WorkerStruct = struct {
     j: usize,
 };
 
-fn render_worker(
+inline fn renderPixel(
     world: HittableList,
     max_depth: usize,
     rnd: *RandGen,
     image_width: usize,
-    image_height: isize,
-    samples_per_pixel: isize,
+    image_height: usize,
+    samples_per_pixel: usize,
+    cam: Camera,
+    i: usize,
+    j: usize,
+) u32 {
+    var pixel_color = Color{ 0, 0, 0 };
+    {
+        var s: isize = 0;
+        while (s < samples_per_pixel) : (s += 1) {
+            const u: SType = (@intToFloat(SType, i) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_width - 1);
+            const v: SType = (@intToFloat(SType, j) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_height - 1);
+            const r = cam.getRay(u, v, rnd);
+            pixel_color += rayColor(r, world, rnd, max_depth);
+        }
+    }
+    const result = color.writeColor(pixel_color, samples_per_pixel);
+    return result;
+}
+
+fn renderWorker(
+    world: HittableList,
+    max_depth: usize,
+    rnd: *RandGen,
+    image_width: usize,
+    image_height: usize,
+    samples_per_pixel: usize,
     num_task_remain: *u64,
     cam: Camera,
     mutex: *Mutex,
     queue: *PQeq,
-    return_array_ptr: *[][]i64,
+    return_array_ptr: *[][]u32,
 ) !void {
     std.event.Loop.startCpuBoundOperation();
 
@@ -123,40 +149,37 @@ fn render_worker(
             } else {
                 const i = task.?.i;
                 const j = task.?.j;
-                var pixel_color = Color{ 0, 0, 0 };
-                {
-                    var s: isize = 0;
-                    while (s < samples_per_pixel) : (s += 1) {
-                        const u: SType = (@intToFloat(SType, i) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_width - 1);
-                        const v: SType = (@intToFloat(SType, j) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_height - 1);
-                        const r = cam.getRay(u, v, rnd);
-                        pixel_color += rayColor(r, world, rnd, max_depth);
-                    }
-                }
-                const result = color.writeColor(pixel_color, samples_per_pixel);
+
+                const result = renderPixel(
+                    world,
+                    max_depth,
+                    rnd,
+                    image_width,
+                    image_height,
+                    samples_per_pixel,
+                    cam,
+                    i,
+                    j,
+                );
 
                 mutex.*.lock();
                 return_array_ptr.*[i][j] = result;
                 num_task_remain.* -= 1;
                 const now_task_remain = num_task_remain.*;
                 mutex.*.unlock();
-                if (now_task_remain % 100 == 0) std.debug.print("remain tasks:\t{d}\n", .{num_task_remain.*});
+                if (now_task_remain % 100 == 0) print("remain tasks:\t{d}\n", .{num_task_remain.*});
             }
         }
     }
 }
 
-pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror![][]i64 {
+pub fn mainRender(config: Config, comptime thread_enable: bool, allocator: std.mem.Allocator) anyerror![][]u32 {
     var rnd = RandGen.init(0);
-
-    var mutex: Mutex = .{};
-    var queue = PQeq.init(allocator, {});
-    var num_task_remain: u64 = 0;
 
     // image
     const aspect_ratio = config.aspect_ratio;
     const image_width: usize = config.image_width;
-    comptime var image_height: usize = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
+    const image_height: usize = @floatToInt(usize, @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio);
     const samples_per_pixel: usize = config.samples_per_pixel;
     const max_depth: usize = config.max_depth;
 
@@ -183,64 +206,88 @@ pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror![]
     );
 
     // create return array
-    var return_array: [][]i64 = undefined;
-    return_array = try allocator.alloc([]i64, image_width);
-    for (return_array) |*item| item.* = try allocator.alloc(i64, image_height);
+    var return_array: [][]u32 = undefined;
+    return_array = try allocator.alloc([]u32, image_width);
+    for (return_array) |*item| item.* = try allocator.alloc(u32, image_height);
 
-    // Prepare thread
-    const thread_count = try std.Thread.getCpuCount();
-    std.debug.print("Thread count: {d}\n", .{thread_count});
-    var promises =
-        try allocator.alloc(@Frame(render_worker), thread_count);
-    defer allocator.free(promises);
+    if (thread_enable) {
+        var mutex: Mutex = .{};
+        var queue = PQeq.init(allocator, {});
+        var num_task_remain: u64 = 0;
 
-    // Queue tasks
-    std.debug.print("start queue tasks\n", .{});
-    var j: usize = image_height;
-    var i: usize = 0;
-    while (0 < j) : (j -= 1) {
-        i = 0;
-        while (i < image_width) : (i += 1) {
-            if (mutex.tryLock()) {
-                try queue.add(WorkerStruct{ .i = i, .j = j - 1 });
-                num_task_remain += 1;
-                mutex.unlock();
+        // Queue tasks
+        print("start queue tasks\n", .{});
+        var j: usize = image_height;
+        var i: usize = 0;
+        while (0 < j) : (j -= 1) {
+            i = 0;
+            while (i < image_width) : (i += 1) {
+                if (mutex.tryLock()) {
+                    try queue.add(WorkerStruct{ .i = i, .j = j - 1 });
+                    num_task_remain += 1;
+                    mutex.unlock();
+                }
             }
+        } else {
+            print("all tasks queued\n", .{});
+        }
+
+        const thread_count = try std.Thread.getCpuCount();
+        print("Thread count: {d}\n", .{thread_count});
+        var promises =
+            try allocator.alloc(@Frame(renderWorker), thread_count);
+        defer allocator.free(promises);
+
+        // Start a worker on every cpu
+        var c: usize = 0;
+        while (c < thread_count) : (c += 1) {
+            print("{d}\n", .{c});
+            promises[c] =
+                async renderWorker(
+                world,
+                max_depth,
+                &rnd,
+                image_width,
+                image_height,
+                samples_per_pixel,
+                &num_task_remain,
+                cam,
+                &mutex,
+                &queue,
+                &return_array,
+            );
+        }
+
+        for (promises) |*future| {
+            _ = await future;
+        } else {
+            print("rendering done", .{});
         }
     } else {
-        std.debug.print("all tasks queued\n", .{});
-    }
-
-    // Start a worker on every cpu
-    var c: usize = 0;
-    while (c < thread_count) : (c += 1) {
-        std.debug.print("{d}\n", .{c});
-        promises[c] =
-            async render_worker(
-            world,
-            max_depth,
-            &rnd,
-            // writer,
-            image_width,
-            image_height,
-            samples_per_pixel,
-            &num_task_remain,
-            cam,
-            &mutex,
-            &queue,
-            &return_array,
-        );
-    }
-
-    for (promises) |*future| {
-        _ = await future;
-    } else {
-        debug.print("rendering done", .{});
+        var j: usize = image_height;
+        var i: usize = 0;
+        while (0 < j) : (j -= 1) {
+            i = 0;
+            while (i < image_width) : (i += 1) {
+                const result = renderPixel(
+                    world,
+                    max_depth,
+                    &rnd,
+                    image_width,
+                    image_height,
+                    samples_per_pixel,
+                    cam,
+                    i,
+                    j,
+                );
+                return_array[i][j - 1] = result;
+            }
+        }
     }
     return return_array;
 }
 
-pub fn writePPM(writer: anytype, array: [][]const i64) anyerror!void {
+pub fn writePPM(writer: anytype, array: [][]const u32) anyerror!void {
     const w = writer.*;
     const image_width = array.len;
     const image_height = array[0].len;
@@ -273,8 +320,7 @@ pub fn main() anyerror!void {
     var writer = buffered_writer.writer();
 
     const config = Config{};
-
-    const array = try render(config, allocator);
+    const array = try mainRender(config, true, allocator);
     try writePPM(&writer, array);
     try buffered_writer.flush();
     debug.print("writing PPM done", .{});

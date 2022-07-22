@@ -6,16 +6,16 @@ const SType = rtw.SType;
 const Color = rtw.Color;
 const sqrt = math.sqrt;
 
-pub fn writeColor(pixel_color: Color, samples_per_pixel: anytype) i64 {
+pub fn writeColor(pixel_color: Color, samples_per_pixel: anytype) u32 {
     _ = ensureInt(@TypeOf(samples_per_pixel));
     const scale: SType = 1.0 / @intToFloat(SType, samples_per_pixel);
     const r: SType = sqrt(pixel_color[0] * scale);
     const g: SType = sqrt(pixel_color[1] * scale);
     const b: SType = sqrt(pixel_color[2] * scale);
 
-    const rn = clp(r, isize);
-    const gn = clp(g, isize);
-    const bn = clp(b, isize);
+    const rn = clp(r, u32);
+    const gn = clp(g, u32);
+    const bn = clp(b, u32);
     return rn << 16 | gn << 8 | bn;
 }
 

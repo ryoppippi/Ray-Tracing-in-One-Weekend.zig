@@ -39,6 +39,12 @@ pub fn clamp(x: SType, min: SType, max: SType) SType {
     return if (x < min) min else if (x > max) max else x;
 }
 
+pub fn debugPrint(comptime x: []const u8, y: anytype) void {
+    if (@import("builtin").os.tag != .freestanding) {
+        std.debug.print(x, y);
+    }
+}
+
 test "random" {
     const expect = std.testing.expect;
     const print = std.debug.print;
