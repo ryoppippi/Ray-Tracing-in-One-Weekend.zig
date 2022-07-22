@@ -12,6 +12,7 @@ const Point3 = rtw.Point3;
 const SType = rtw.SType;
 const Ray = ray.Ray;
 const HitRecord = hittable.HitRecord;
+const ReturnHitStruct = hittable.ReturnHitStruct;
 const Material = material.Material;
 
 const dot = vec.dot;
@@ -22,11 +23,6 @@ pub const Sphere = struct {
     radius: SType,
     mat: Material,
     const Self = @This();
-
-    const ReturnHitStruct = struct {
-        is_hit: bool,
-        rec: HitRecord,
-    };
 
     pub fn hit(
         self: Self,

@@ -42,9 +42,7 @@ pub const HittableList = struct {
         var closest_so_far = t_max;
 
         for (self.objects.items) |object| {
-            const temp_hit = switch (object) {
-                .Sphere => |s| s.hit(r, t_min, closest_so_far),
-            };
+            const temp_hit = object.hit(r, t_min, closest_so_far);
             const temp_rec = temp_hit.rec;
             if (temp_hit.is_hit) {
                 hit_anything = true;
