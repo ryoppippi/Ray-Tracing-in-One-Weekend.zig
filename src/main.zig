@@ -1,3 +1,5 @@
+pub const io_mode = .evented;
+
 const std = @import("std");
 const math = std.math;
 const debug = std.debug;
@@ -11,6 +13,10 @@ const sphere = @import("sphere.zig");
 const camera = @import("camera.zig");
 const material = @import("material.zig");
 const randomScene = @import("randomScene.zig");
+
+const PriorityQueue = std.PriorityQueue;
+const Mutex = std.Thread.Mutex;
+const Order = std.math.Order;
 
 const Vec3 = rtw.Vec3;
 const Color = rtw.Color;
@@ -30,7 +36,23 @@ const f3 = rtw.f3;
 
 const infinity = rtw.getInfinity(SType);
 
-fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime_int) Color {
+pub const Config = struct {
+    // image config
+    aspect_ratio: f32 = 3.0 / 2.0,
+    image_width: usize = 1200,
+    samples_per_pixel: usize = 500,
+    max_depth: usize = 50,
+
+    // camera config
+    lookfrom: Point3 = Point3{ 13, 2, 3 },
+    lookat: Point3 = Point3{ 0, 0, 0 },
+    vup: Vec3 = Vec3{ 0, 1, 0 },
+    vfov: f32 = 20.0,
+    dist_to_focus: f32 = 10.0,
+    aperture: f32 = 0.1,
+};
+
+fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, depth: usize) Color {
     const black: Color = Color{ 0.0, 0.0, 0.0 };
 
     {
@@ -81,31 +103,83 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
     // return f3(1.0 - t) * Color{ 1.0, 1.0, 1.0 } + f3(t) * Color{ 0.5, 0.7, 1.0 };
 }
 
-pub const Config = struct {
-    // image config
-    aspect_ratio: f32 = 3.0 / 2.0,
-    image_width: isize = 1200,
-    samples_per_pixel: isize = 500,
-    max_depth: isize = 50,
+fn eqf(context: void, _: WorkerStruct, _: WorkerStruct) Order {
+    _ = context;
+    return Order.eq;
+}
 
-    // camera config
-    lookfrom: Point3 = Point3{ 13, 2, 3 },
-    lookat: Point3 = Point3{ 0, 0, 0 },
-    vup: Vec3 = Vec3{ 0, 1, 0 },
-    vfov: f32 = 20.0,
-    dist_to_focus: f32 = 10.0,
-    aperture: f32 = 0.1,
+const PQeq = PriorityQueue(WorkerStruct, void, eqf);
+
+const WorkerStruct = struct {
+    i: usize,
+    j: usize,
 };
 
-pub fn render(comptime config: Config, allocator: std.mem.Allocator, writer: anytype) anyerror!void {
+fn render_worker(
+    world: HittableList,
+    max_depth: usize,
+    rnd: *RandGen,
+    image_width: usize,
+    image_height: isize,
+    samples_per_pixel: isize,
+    num_task_remain: *u64,
+    cam: Camera,
+    mutex: *Mutex,
+    queue: *PQeq,
+    return_array_ptr: *[][]i64,
+) !void {
+    std.event.Loop.startCpuBoundOperation();
+
+    var task: ?WorkerStruct = undefined;
+    while (true) {
+        if (mutex.*.tryLock()) {
+            task = queue.*.removeOrNull();
+            // const count = queue.*.count();
+            mutex.*.unlock();
+
+            if (task == null) {
+                if (num_task_remain.* == 0) {
+                    return;
+                }
+            } else {
+                const i = task.?.i;
+                const j = task.?.j;
+                var pixel_color = Color{ 0, 0, 0 };
+                {
+                    var s: isize = 0;
+                    while (s < samples_per_pixel) : (s += 1) {
+                        const u: SType = (@intToFloat(SType, i) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_width - 1);
+                        const v: SType = (@intToFloat(SType, j) + rtw.getRandom(rnd, SType)) / @intToFloat(SType, image_height - 1);
+                        const r = cam.getRay(u, v, rnd);
+                        pixel_color += rayColor(r, world, rnd, max_depth);
+                    }
+                }
+                const result = color.writeColor(pixel_color, samples_per_pixel);
+
+                mutex.*.lock();
+                return_array_ptr.*[i][j] = result;
+                num_task_remain.* -= 1;
+                const now_task_remain = num_task_remain.*;
+                mutex.*.unlock();
+                if (now_task_remain % 100 == 0) std.debug.print("remain tasks:\t{d}\n", .{num_task_remain.*});
+            }
+        }
+    }
+}
+
+pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror![][]i64 {
     var rnd = RandGen.init(0);
+
+    var mutex: Mutex = .{};
+    var queue = PQeq.init(allocator, {});
+    var num_task_remain: u64 = 0;
 
     // image
     const aspect_ratio = config.aspect_ratio;
-    const image_width: isize = config.image_width;
-    comptime var image_height: isize = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
-    const samples_per_pixel: isize = config.samples_per_pixel;
-    const max_depth: isize = config.max_depth;
+    const image_width: usize = config.image_width;
+    comptime var image_height: usize = @intToFloat(@TypeOf(aspect_ratio), image_width) / aspect_ratio;
+    const samples_per_pixel: usize = config.samples_per_pixel;
+    const max_depth: usize = config.max_depth;
 
     // world
     var world = HittableList.init(allocator);
@@ -129,34 +203,85 @@ pub fn render(comptime config: Config, allocator: std.mem.Allocator, writer: any
         dist_to_focus,
     );
 
-    // Render
-    try writer.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
+    // create return array
+    var return_array: [][]i64 = undefined;
+    return_array = try allocator.alloc([]i64, image_width);
+    for (return_array) |*item| item.* = try allocator.alloc(i64, image_height);
+
+    // Prepare thread
+    const thread_count = try std.Thread.getCpuCount();
+    std.debug.print("Thread count: {d}\n", .{thread_count});
+    var promises =
+        try allocator.alloc(@Frame(render_worker), thread_count);
+    defer allocator.free(promises);
+
+    // Queue tasks
+    std.debug.print("start queue tasks\n", .{});
+    var j: usize = image_height;
+    var i: usize = 0;
+    while (0 < j) : (j -= 1) {
+        i = 0;
+        while (i < image_width) : (i += 1) {
+            if (mutex.tryLock()) {
+                try queue.add(WorkerStruct{ .i = i, .j = j - 1 });
+                num_task_remain += 1;
+                mutex.unlock();
+            }
+        }
+    } else {
+        std.debug.print("all tasks queued\n", .{});
+    }
+
+    // Start a worker on every cpu
+    var c: usize = 0;
+    while (c < thread_count) : (c += 1) {
+        std.debug.print("{d}\n", .{c});
+        promises[c] =
+            async render_worker(
+            world,
+            max_depth,
+            &rnd,
+            // writer,
+            image_width,
+            image_height,
+            samples_per_pixel,
+            &num_task_remain,
+            cam,
+            &mutex,
+            &queue,
+            &return_array,
+        );
+    }
+
+    for (promises) |*future| {
+        _ = await future;
+    } else {
+        debug.print("rendering done", .{});
+    }
+    return return_array;
+}
+
+pub fn writePPM(writer: anytype, array: [][]const i64) anyerror!void {
+    const w = writer.*;
+    const image_width = array.len;
+    const image_height = array[0].len;
+
+    try w.print("P3\n{d} {d}\n255\n", .{ image_width, image_height });
 
     {
-        var j: isize = image_height - 1;
-        while (0 <= j) : (j -= 1) {
-            debug.print("{d}%\n", .{@round(@intToFloat(f16, image_height - j) / @intToFloat(f16, image_height - 1) * 100)});
-            {
-                var i: isize = 0;
-                while (i < image_width) : (i += 1) {
-                    var pixel_color = Color{ 0, 0, 0 };
-                    {
-                        var s: isize = 0;
-                        while (s < samples_per_pixel) : (s += 1) {
-                            const u: SType = (@intToFloat(SType, i) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_width - 1);
-                            const v: SType = (@intToFloat(SType, j) + rtw.getRandom(&rnd, SType)) / @intToFloat(SType, image_height - 1);
-                            const r = cam.getRay(u, v, &rnd);
-                            pixel_color += rayColor(r, world, &rnd, max_depth);
-                        }
-                    }
-                    const result = color.writeColor(pixel_color, samples_per_pixel);
-                    try writer.print("{d} {d} {d}\n", .{ result[0], result[1], result[2] });
-                }
+        var j: usize = image_height;
+        var i: usize = 0;
+        while (0 < j) : (j -= 1) {
+            i = 0;
+            while (i < image_width) : (i += 1) {
+                const c = array[i][j - 1];
+                const red = c >> 16 & 0xFF;
+                const green = c >> 8 & 0xFF;
+                const blue = c & 0xFF;
+                try w.print("{d} {d} {d}\n", .{ red, green, blue });
             }
         }
     }
-    debug.print("done", .{});
-    try buffered_writer.flush();
 }
 
 pub fn main() anyerror!void {
@@ -169,22 +294,9 @@ pub fn main() anyerror!void {
     var writer = buffered_writer.writer();
 
     const config = Config{};
-    _ = try render(config, allocator, writer);
+
+    const array = try render(config, allocator);
+    try writePPM(&writer, array);
     try buffered_writer.flush();
-}
-
-test "small rendering test" {
-    // const test_allocator = std.testing.allocator;
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var arena = std.heap.ArenaAllocator.init(gpa.allocator());
-    defer arena.deinit();
-    var test_allocator = arena.allocator();
-    const stdout = std.io.getStdOut().writer();
-
-    const config = Config{
-        .aspect_ratio = 3.0 / 2.0,
-        .image_width = 45,
-        .samples_per_pixel = 20,
-    };
-    _ = try render(config, test_allocator, &stdout);
+    debug.print("writing PPM done", .{});
 }
