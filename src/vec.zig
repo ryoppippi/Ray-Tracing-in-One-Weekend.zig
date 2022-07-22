@@ -97,7 +97,7 @@ pub inline fn randomUnitVector(rnd: *RandGen, comptime T: type) T {
     const a = rtw.getRandomInRange(rnd, vt, 2, math.pi);
     const z = rtw.getRandomInRange(rnd, vt, -1, 1);
     const r = math.sqrt(1 - z * z);
-    return T{ r * math.cos(a), r * math.sin(a), z };
+    return T{ r * @cos(a), r * @sin(a), z };
 }
 
 pub inline fn randomInHemisphere(rnd: *RandGen, comptime T: type) T {
