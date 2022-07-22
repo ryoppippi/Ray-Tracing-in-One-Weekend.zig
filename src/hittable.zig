@@ -16,8 +16,21 @@ const Sphere = sphere.Sphere;
 
 const dot = vec.dot;
 
+pub const ReturnHitStruct = struct {
+    is_hit: bool,
+    rec: HitRecord,
+};
+
 pub const Hittable = union(enum) {
     Sphere: Sphere,
+
+    const Self = @This();
+
+    pub fn hit(self: Self, r: Ray, t_min: SType, t_max: SType) ReturnHitStruct {
+        return switch (self) {
+            .Sphere => |s| s.hit(r, t_min, t_max),
+        };
+    }
 
     pub fn sphere(center: Point3, radius: SType, mat: Material) Hittable {
         return Hittable{ .Sphere = Sphere{ .center = center, .radius = radius, .mat = mat } };

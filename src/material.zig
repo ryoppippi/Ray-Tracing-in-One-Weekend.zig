@@ -25,6 +25,16 @@ pub const Material = union(enum) {
     Metal: Metal,
     Dielectric: Dielectric,
 
+    const Self = @This();
+
+    pub fn scatter(self: Self, r_in: Ray, rec: HitRecord, rnd: *RandGen) Scatter {
+        return switch (self) {
+            .Lambertian => |l| l.scatter(r_in, rec, rnd),
+            .Metal => |m| m.scatter(r_in, rec, rnd),
+            .Dielectric => |d| d.scatter(r_in, rec, rnd),
+        };
+    }
+
     pub fn lambertian(albedo: Vec3) Material {
         return Material{ .Lambertian = Lambertian{ .albedo = albedo } };
     }

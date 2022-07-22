@@ -43,11 +43,7 @@ fn rayColor(r: Ray, world: HittableList, rnd: *RandGen, comptime depth: comptime
             const world_hit = world.hit(scattered, 0.001, infinity);
             rec = world_hit.rec;
             if (world_hit.is_hit) {
-                const s: Scatter = switch (rec.mat) {
-                    .Lambertian => |l| l.scatter(scattered, rec, rnd),
-                    .Metal => |m| m.scatter(scattered, rec, rnd),
-                    .Dielectric => |d| d.scatter(scattered, rec, rnd),
-                };
+                const s = rec.mat.scatter(scattered, rec, rnd);
                 const is_scattered = s.is_scattered;
                 scattered = s.scattered;
                 const attenuation = s.attenuation;
