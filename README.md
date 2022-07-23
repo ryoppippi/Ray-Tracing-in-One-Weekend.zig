@@ -8,8 +8,7 @@
 
 ```sh
 git clone https://github.com/ryoppippi/Ray-Tracing-in-One-Weekend.zig
-zig build -Drelease-fast=true
-./zig-out/bin/Ray-Tracing-in-One-Weekend.zig >> image.ppm
+zig build -Drelease-fast=true run >> image.ppm
 ```
 
 ## Bechmark
