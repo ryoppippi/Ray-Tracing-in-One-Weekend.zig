@@ -94,7 +94,7 @@ const WorkerStruct = struct {
     j: usize,
 };
 
-fn render_worker(
+fn renderWorker(
     world: HittableList,
     max_depth: usize,
     rnd: *RandGen,
@@ -191,7 +191,7 @@ pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror![]
     const thread_count = try std.Thread.getCpuCount();
     std.debug.print("Thread count: {d}\n", .{thread_count});
     var promises =
-        try allocator.alloc(@Frame(render_worker), thread_count);
+        try allocator.alloc(@Frame(renderWorker), thread_count);
     defer allocator.free(promises);
 
     // Queue tasks
@@ -216,7 +216,7 @@ pub fn render(comptime config: Config, allocator: std.mem.Allocator) anyerror![]
     while (c < thread_count) : (c += 1) {
         std.debug.print("{d}\n", .{c});
         promises[c] =
-            async render_worker(
+            async renderWorker(
             world,
             max_depth,
             &rnd,
