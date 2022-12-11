@@ -11,6 +11,8 @@ git clone https://github.com/ryoppippi/Ray-Tracing-in-One-Weekend.zig
 zig build -Drelease-fast=true run >> image.ppm
 ```
 
+Note that this build works on zig 0.10.0 (because of async api is not work on self-hosted compiler)
+
 ## Bechmark
 
 - Machine: Mac Mini 2021
